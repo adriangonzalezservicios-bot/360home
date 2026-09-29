@@ -60,3 +60,12 @@
   right: 15px !important;
   opacity: 0.85;
 }
+
+/* Ocultar barra de scroll en contenedores desplazables horizontalmente */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

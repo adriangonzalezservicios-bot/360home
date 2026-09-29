@@ -24,7 +24,11 @@ import {
   Sliders,
   ExternalLink,
   Sparkles,
-  Cpu
+  Cpu,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Navigation
 } from 'lucide-react';
 
 // Declaraciones globales para los CDN inyectados
@@ -408,9 +412,35 @@ const PANNELLUM_HTML_CODE = `<!DOCTYPE html>
 
 export default function App() {
   const [engine, setEngine] = useState<'marzipano' | 'pannellum'>('marzipano');
-  const [currentScene, setCurrentScene] = useState<'interior' | 'exterior' | 'custom'>('interior');
+  const [currentScene, setCurrentScene] = useState<
+    | 'vista-aerea'
+    | 'fachada-frontal'
+    | 'fachada-lateral'
+    | 'fachada-trasera'
+    | 'fachada-esquina'
+    | 'exterior-dusk'
+    | 'interior'
+    | 'interior-dormitorio'
+    | 'interior-bano'
+    | 'custom'
+  >('fachada-frontal');
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const [customImageName, setCustomImageName] = useState<string>('render-360.jpg');
+
+  // Floating Minimap state
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [isMinimapExpanded, setIsMinimapExpanded] = useState(false);
+
+  // Scene navigation bar state and refs
+  const sceneScrollRef = useRef<HTMLDivElement>(null);
+  const [showSceneDropdown, setShowSceneDropdown] = useState(false);
+
+  const scrollScenes = (direction: 'left' | 'right') => {
+    if (sceneScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -240 : 240;
+      sceneScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   // Viewer state
   const [isRotating, setIsRotating] = useState(true);
@@ -431,30 +461,258 @@ export default function App() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedCoords, setCopiedCoords] = useState(false);
 
-  // Hotspots list
-  const [hotspots, setHotspots] = useState<HotspotItem[]>([
-    {
-      id: 'hs-1',
-      pitch: -3.0,
-      yaw: 22.0,
-      text: 'Sala de Estar y Comedor (3.80m x 6.60m) con vista al jardín',
-      type: 'info'
-    },
-    {
-      id: 'hs-2',
-      pitch: 1.5,
-      yaw: 105.0,
-      text: 'Cocina lineal integrada con bacha y mesada de trabajo',
-      type: 'info'
-    },
-    {
-      id: 'hs-3',
-      pitch: -2.0,
-      yaw: -70.0,
-      text: 'Distribuidor hacia Dormitorio principal (3.70m x 3.50m) y Baño',
-      type: 'info'
+  // Hotspots list dependientes de la cara/escena seleccionada
+  const getInitialHotspots = (scene: string): HotspotItem[] => {
+    switch (scene) {
+      case 'vista-aerea':
+        return [
+          {
+            id: 'va-1',
+            pitch: -48.0,
+            yaw: -5.0,
+            text: 'Cubierta y Techo: Pendientes ocultas, aislación térmica y desagües pluviales',
+            type: 'info'
+          },
+          {
+            id: 'va-2',
+            pitch: -38.0,
+            yaw: 30.0,
+            text: 'Pérgola de madera y Porche de acceso principal con iluminación exterior',
+            type: 'info'
+          },
+          {
+            id: 'va-3',
+            pitch: -32.0,
+            yaw: -55.0,
+            text: 'Galería lateral y patio: Conexión directa desde ventanal estar-comedor',
+            type: 'info'
+          },
+          {
+            id: 'va-4',
+            pitch: -42.0,
+            yaw: 165.0,
+            text: 'Contrafrente y patio posterior: Dormitorio y baño con retiro reglamentario',
+            type: 'info'
+          },
+          {
+            id: 'va-5',
+            pitch: -30.0,
+            yaw: 95.0,
+            text: 'Cochera vehicular y senda peatonal con canteros de lavandas',
+            type: 'info'
+          },
+          {
+            id: 'va-6',
+            pitch: 8.0,
+            yaw: -130.0,
+            text: 'Visuales 360° del entorno: Orientación solar óptima y paisaje',
+            type: 'info'
+          }
+        ];
+      case 'fachada-frontal':
+        return [
+          {
+            id: 'ff-1',
+            pitch: -3.5,
+            yaw: 15.0,
+            text: 'Acceso principal: Puerta de seguridad pivotante con cerradura embutida',
+            type: 'info'
+          },
+          {
+            id: 'ff-2',
+            pitch: 4.0,
+            yaw: 35.0,
+            text: 'Pérgola de cubierta metálica con vigas transversales de madera natural',
+            type: 'info'
+          },
+          {
+            id: 'ff-3',
+            pitch: -5.0,
+            yaw: -40.0,
+            text: 'Revestimiento en piedra natural rústica y apliques bidireccionales LED cálidos',
+            type: 'info'
+          },
+          {
+            id: 'ff-4',
+            pitch: -7.5,
+            yaw: 125.0,
+            text: 'Cochera vehicular y senda peatonal con canteros de lavandas',
+            type: 'info'
+          }
+        ];
+      case 'fachada-lateral':
+        return [
+          {
+            id: 'fl-1',
+            pitch: -2.0,
+            yaw: -15.0,
+            text: 'Puerta ventana corrediza DVH con acceso directo desde el living al patio',
+            type: 'info'
+          },
+          {
+            id: 'fl-2',
+            pitch: 0.5,
+            yaw: 45.0,
+            text: 'Ventana de cocina y ventilación exterior con marco de aluminio negro',
+            type: 'info'
+          },
+          {
+            id: 'fl-3',
+            pitch: -8.0,
+            yaw: 85.0,
+            text: 'Muro perimetral de ladrillo a la vista con acabado gris texturado',
+            type: 'info'
+          }
+        ];
+      case 'fachada-trasera':
+        return [
+          {
+            id: 'ft-1',
+            pitch: 0.0,
+            yaw: -10.0,
+            text: 'Ventana del Dormitorio Principal (3.70 x 3.50m) con cortinas black-out',
+            type: 'info'
+          },
+          {
+            id: 'ft-2',
+            pitch: -1.0,
+            yaw: 65.0,
+            text: 'Ventana del Baño / Sector de ventilación higiénica',
+            type: 'info'
+          },
+          {
+            id: 'ft-3',
+            pitch: -9.0,
+            yaw: -80.0,
+            text: 'Jardín posterior privado con césped natural y retiro reglamentario',
+            type: 'info'
+          }
+        ];
+      case 'fachada-esquina':
+        return [
+          {
+            id: 'fe-1',
+            pitch: -2.0,
+            yaw: 20.0,
+            text: 'Volumetría en "L" (Módulo 2 de 60 m²): unión patio lateral y jardín',
+            type: 'info'
+          },
+          {
+            id: 'fe-2',
+            pitch: -4.0,
+            yaw: -55.0,
+            text: 'Puerta lateral de servicio y salida técnica al patio',
+            type: 'info'
+          },
+          {
+            id: 'fe-3',
+            pitch: -8.0,
+            yaw: 110.0,
+            text: 'Sendero de hormigón peinado y vista al área de estacionamiento',
+            type: 'info'
+          }
+        ];
+      case 'exterior-dusk':
+        return [
+          {
+            id: 'ed-1',
+            pitch: -2.0,
+            yaw: 12.0,
+            text: 'Escena nocturna: Apliques de fachada LED iluminando texturas de mampostería',
+            type: 'info'
+          },
+          {
+            id: 'ed-2',
+            pitch: 3.0,
+            yaw: 40.0,
+            text: 'Iluminación cálida indirecta bajo pérgola de madera',
+            type: 'info'
+          }
+        ];
+      case 'interior':
+        return [
+          {
+            id: 'in-1',
+            pitch: -3.0,
+            yaw: 22.0,
+            text: 'Sala de Estar y Comedor (3.80m x 6.60m) con vista al jardín exterior',
+            type: 'info'
+          },
+          {
+            id: 'in-2',
+            pitch: 1.5,
+            yaw: 105.0,
+            text: 'Cocina lineal integrada con bacha, mesada de trabajo y extractor',
+            type: 'info'
+          },
+          {
+            id: 'in-3',
+            pitch: -2.0,
+            yaw: -70.0,
+            text: 'Distribuidor hacia Dormitorio principal y Baño completo',
+            type: 'info'
+          }
+        ];
+      case 'interior-dormitorio':
+        return [
+          {
+            id: 'id-1',
+            pitch: -4.0,
+            yaw: 0.0,
+            text: 'Cama matrimonial de 2 plazas con respaldo tapizado neutro',
+            type: 'info'
+          },
+          {
+            id: 'id-2',
+            pitch: 0.0,
+            yaw: 90.0,
+            text: 'Ventana al jardín con iluminación natural matutina (3.70m x 3.50m)',
+            type: 'info'
+          },
+          {
+            id: 'id-3',
+            pitch: -2.0,
+            yaw: -90.0,
+            text: 'Placard empotrado con puertas corredizas y espacio organizador',
+            type: 'info'
+          }
+        ];
+      case 'interior-bano':
+        return [
+          {
+            id: 'ib-1',
+            pitch: -5.0,
+            yaw: 30.0,
+            text: 'Box de ducha con mampara de vidrio templado y grifería monocomando',
+            type: 'info'
+          },
+          {
+            id: 'ib-2',
+            pitch: 1.0,
+            yaw: -60.0,
+            text: 'Vanitory flotante con espejo retroiluminado LED y revestimiento cerámico',
+            type: 'info'
+          },
+          {
+            id: 'ib-3',
+            pitch: -6.0,
+            yaw: 180.0,
+            text: 'Inodoro y bidet en losa blanca de diseño compacto (2.30m x 1.60m)',
+            type: 'info'
+          }
+        ];
+      default:
+        return [];
     }
-  ]);
+  };
+
+  const [hotspots, setHotspots] = useState<HotspotItem[]>(getInitialHotspots('fachada-frontal'));
+
+  // Cambiar hotspots automáticamente al cambiar de escena
+  const handleSceneChange = (scene: any) => {
+    setCurrentScene(scene);
+    setHotspots(getInitialHotspots(scene));
+  };
 
   const [newHotspotText, setNewHotspotText] = useState('');
 
@@ -464,15 +722,87 @@ export default function App() {
   const autorotateMovementRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Obtener ruta de la imagen activa
+  // Obtener ruta de la imagen activa para todas las caras, áreas interiores y vista aérea
   const getImageSource = () => {
     if (currentScene === 'custom' && customImageUrl) {
       return customImageUrl;
     }
-    if (currentScene === 'exterior') {
-      return '/exterior-360.jpg';
+    switch (currentScene) {
+      case 'vista-aerea':
+        return '/vista-aerea-360.jpg';
+      case 'fachada-frontal':
+        return '/fachada-frontal-360.jpg';
+      case 'fachada-lateral':
+        return '/fachada-lateral-360.jpg';
+      case 'fachada-trasera':
+        return '/fachada-trasera-360.jpg';
+      case 'fachada-esquina':
+        return '/fachada-esquina-360.jpg';
+      case 'exterior-dusk':
+        return '/exterior-dusk-360.jpg';
+      case 'interior':
+        return '/render-360.jpg';
+      case 'interior-dormitorio':
+        return '/interior-dormitorio-360.jpg';
+      case 'interior-bano':
+        return '/interior-bano-360.jpg';
+      default:
+        return '/vista-aerea-360.jpg';
     }
-    return '/render-360.jpg';
+  };
+
+  const getSceneTitle = (scene: string) => {
+    switch (scene) {
+      case 'vista-aerea':
+        return 'Vista Superior 360°';
+      case 'fachada-frontal':
+        return '1. Frente Principal';
+      case 'fachada-lateral':
+        return '2. Lateral Galería';
+      case 'fachada-trasera':
+        return '3. Contrafrente / Trasera';
+      case 'fachada-esquina':
+        return '4. Esquina en L';
+      case 'exterior-dusk':
+        return 'Exterior Atardecer / Noche';
+      case 'interior':
+        return 'Estar - Comedor';
+      case 'interior-dormitorio':
+        return 'Dormitorio Principal';
+      case 'interior-bano':
+        return 'Baño Completo';
+      case 'custom':
+        return 'Render Personalizado';
+      default:
+        return 'Visor Panorámico 360°';
+    }
+  };
+
+  const getSceneDescription = (scene: string) => {
+    switch (scene) {
+      case 'vista-aerea':
+        return 'Vista Superior 360° Cenital • Techo, Pérgola, Galería, Patio y Entorno Completo';
+      case 'fachada-frontal':
+        return 'Cara Frontal (Fachada Principal) • Pérgola, Entrada y Cochera';
+      case 'fachada-lateral':
+        return 'Cara Lateral (Galería/Patio) • Ventanal Corredizo DVH y Muros';
+      case 'fachada-trasera':
+        return 'Cara Trasera (Contrafrente) • Dormitorio y Baño hacia Jardín';
+      case 'fachada-esquina':
+        return 'Cara Esquina (Patio en L) • Salida de Servicio y Cochera';
+      case 'exterior-dusk':
+        return 'Vista Nocturna • Iluminación LED Cálida y Pérgola';
+      case 'interior':
+        return 'Interior Vivienda 60 m² • Estar - Comedor Integrado (3.80 × 6.60 m)';
+      case 'interior-dormitorio':
+        return 'Dormitorio Principal (3.70 × 3.50 m) • Cama Matrimonial y Placard';
+      case 'interior-bano':
+        return 'Baño Completo (2.30 × 1.60 m) • Box de Ducha y Vanitory';
+      case 'custom':
+        return `Archivo Activo: ${customImageName}`;
+      default:
+        return 'Render Panorámico Equirrectangular 360°';
+    }
   };
 
   // Inicializar visor WebGL según el motor seleccionado
@@ -526,8 +856,10 @@ export default function App() {
             120 * Math.PI / 180
           );
 
+          const startPitch = currentScene === 'vista-aerea' ? (-25 * Math.PI) / 180 : 0;
+
           const view = new window.Marzipano.RectilinearView(
-            { yaw: 0, pitch: 0, fov: (hfov * Math.PI) / 180 },
+            { yaw: 0, pitch: startPitch, fov: (hfov * Math.PI) / 180 },
             limiter
           );
 
@@ -543,7 +875,7 @@ export default function App() {
 
           const autorotate = window.Marzipano.autorotate({
             yawSpeed: 0.03,
-            targetPitch: 0,
+            targetPitch: startPitch,
             targetFov: (hfov * Math.PI) / 180
           });
           autorotateMovementRef.current = autorotate;
@@ -597,6 +929,8 @@ export default function App() {
             panorama: activeImage,
             autoLoad: true,
             autoRotate: isRotating ? -2 : 0,
+            pitch: currentScene === 'vista-aerea' ? -25 : 0,
+            yaw: 0,
             crossOrigin: 'anonymous',
             showZoomCtrl: false,
             showFullscreenCtrl: false,
@@ -828,159 +1162,433 @@ export default function App() {
             Iniciando Motor {engine === 'marzipano' ? 'Marzipano WebGL' : 'Pannellum WebGL'}...
           </p>
           <span className="text-xs text-neutral-500 mt-1">
-            Proyección equirrectangular ({currentScene === 'custom' ? customImageName : currentScene})
+            Proyección equirrectangular ({currentScene === 'custom' ? customImageName : getSceneTitle(currentScene)})
           </span>
         </div>
       )}
 
-      {/* 1. BARRA SUPERIOR (HEADER) */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-3 sm:p-4 flex items-center justify-between pointer-events-none">
-        {/* Título & Selector de Motor */}
-        <div className="pointer-events-auto flex items-center gap-3 bg-neutral-900/85 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl shadow-2xl">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-white">
-                Visor Panorámico 360°
-              </h1>
-              {/* Badge de librería activa */}
-              <div className="flex items-center gap-1 bg-neutral-800/90 border border-emerald-500/30 rounded-full px-2 py-0.5">
-                <Cpu className="w-3 h-3 text-emerald-400" />
-                <span className="text-[10px] font-mono text-emerald-400 uppercase font-semibold">
-                  {engine === 'marzipano' ? 'Marzipano' : 'Pannellum'}
-                </span>
+      {/* 1. BARRA SUPERIOR (HEADER PRINCIPAL RESPONSIVO) */}
+      <header className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3 pointer-events-none">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2">
+          {/* Título & Identificador de Escena */}
+          <div className="pointer-events-auto flex items-center gap-2.5 bg-neutral-900/90 backdrop-blur-xl border border-white/10 px-3 sm:px-4 py-2 rounded-2xl shadow-2xl">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xs sm:text-sm font-bold tracking-wide uppercase text-white truncate">
+                  Visor 360°
+                </h1>
+                <span className="hidden md:inline text-neutral-400 text-xs">• Vivienda 60 m²</span>
+                {/* Badge de librería activa */}
+                <div className="flex items-center gap-1 bg-neutral-800/90 border border-emerald-500/30 rounded-full px-2 py-0.5 shrink-0">
+                  <Cpu className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[10px] font-mono text-emerald-400 uppercase font-semibold">
+                    {engine === 'marzipano' ? 'Marzipano' : 'Pannellum'}
+                  </span>
+                </div>
               </div>
+              <p className="text-[11px] text-neutral-400 hidden lg:block truncate max-w-md">
+                {getSceneDescription(currentScene)}
+              </p>
             </div>
-            <p className="text-[11px] text-neutral-400 hidden sm:block">
-              {currentScene === 'interior' && 'Render Arquitectónico • Estar - Comedor (Vivienda 60 m²)'}
-              {currentScene === 'exterior' && 'Render Exterior • Fachada y Patio con Pérgola'}
-              {currentScene === 'custom' && `Archivo Activo: ${customImageName}`}
-            </p>
-          </div>
-        </div>
-
-        {/* Acciones principales de la cabecera */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          {/* Selector de Motor WebGL */}
-          <div className="hidden lg:flex items-center bg-neutral-900/85 backdrop-blur-md border border-white/10 p-1 rounded-2xl shadow-xl">
-            <button
-              onClick={() => {
-                setEngine('marzipano');
-                setCodeTab('marzipano');
-              }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                engine === 'marzipano'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-              title="Marzipano: Motor WebGL de alto rendimiento creado por Google"
-            >
-              Marzipano
-            </button>
-            <button
-              onClick={() => {
-                setEngine('pannellum');
-                setCodeTab('pannellum');
-              }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                engine === 'pannellum'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-              title="Pannellum: Motor WebGL ligero y clásico"
-            >
-              Pannellum
-            </button>
           </div>
 
-          {/* Selector de Escenas */}
-          <div className="hidden md:flex items-center bg-neutral-900/85 backdrop-blur-md border border-white/10 p-1 rounded-2xl shadow-xl">
+          {/* Acciones principales de la cabecera */}
+          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+            {/* Botón Destacado: VISTA SUPERIOR 360° */}
             <button
-              onClick={() => setCurrentScene('interior')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all ${
-                currentScene === 'interior'
-                  ? 'bg-neutral-700 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              onClick={() => handleSceneChange('vista-aerea')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all border ${
+                currentScene === 'vista-aerea'
+                  ? 'bg-amber-500 text-neutral-950 border-amber-300 ring-2 ring-amber-400/40 font-bold'
+                  : 'bg-neutral-900/85 hover:bg-neutral-800 text-amber-300 hover:text-white border-amber-500/30 hover:border-amber-400'
               }`}
+              title="Vista Superior 360°: Ver la casa desde el cielo con dron, observando el techo, jardín y entorno"
             >
-              Interior
+              <Navigation className={`w-3.5 h-3.5 ${currentScene === 'vista-aerea' ? 'text-neutral-950 animate-bounce' : 'text-amber-400'}`} />
+              <span className="whitespace-nowrap">Vista Superior 360°</span>
             </button>
+
+            {/* Selector de Motor WebGL */}
+            <div className="hidden md:flex items-center bg-neutral-900/85 backdrop-blur-md border border-white/10 p-0.5 rounded-xl shadow-xl">
+              <button
+                onClick={() => {
+                  setEngine('marzipano');
+                  setCodeTab('marzipano');
+                }}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                  engine === 'marzipano'
+                    ? 'bg-neutral-700 text-white'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+                title="Marzipano: Motor WebGL de alto rendimiento de Google"
+              >
+                Marzipano
+              </button>
+              <button
+                onClick={() => {
+                  setEngine('pannellum');
+                  setCodeTab('pannellum');
+                }}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                  engine === 'pannellum'
+                    ? 'bg-neutral-700 text-white'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+                title="Pannellum: Motor WebGL ligero"
+              >
+                Pannellum
+              </button>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+            />
+
+            {/* Botón Plano Arquitectónico de referencia */}
             <button
-              onClick={() => setCurrentScene('exterior')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all ${
-                currentScene === 'exterior'
-                  ? 'bg-neutral-700 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
+              onClick={() => {
+                setShowMinimap(true);
+                setShowPlanModal(true);
+              }}
+              className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
+              title="Ver Plano Arquitectónico (60 m²)"
             >
-              Exterior
+              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Plano</span>
             </button>
+
+            {/* Botón Código index.html Completo */}
+            <button
+              onClick={() => {
+                setCodeTab(engine);
+                setShowCodeModal(true);
+              }}
+              className="flex items-center gap-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
+              title="Ver y descargar código index.html autónomo"
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Código</span>
+            </button>
+
+            {/* Botón Subir propio */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-all ${
-                currentScene === 'custom'
-                  ? 'bg-neutral-700 text-white shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
+              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
+              title="Subir render 360 propio"
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Subir 360</span>
+              <Upload className="w-3.5 h-3.5 text-cyan-400" />
+            </button>
+
+            {/* Botón Guía Live Server */}
+            <button
+              onClick={() => setShowGuideModal(true)}
+              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
+              title="Guía: Cómo correr con Live Server y evitar CORS"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+            </button>
+
+            {/* Botón Pantalla Completa */}
+            <button
+              onClick={toggleFullscreen}
+              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
+              title="Alternar Pantalla Completa"
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
           </div>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-          />
-
-          {/* Botón Plano Arquitectónico de referencia */}
-          <button
-            onClick={() => setShowPlanModal(true)}
-            className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 px-3 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
-            title="Ver Plano Arquitectónico (60 m²)"
-          >
-            <Layers className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Plano 60 m²</span>
-          </button>
-
-          {/* Botón Código index.html Completo */}
-          <button
-            onClick={() => {
-              setCodeTab(engine);
-              setShowCodeModal(true);
-            }}
-            className="flex items-center gap-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/30 px-3.5 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
-            title="Ver y descargar código index.html autónomo con Marzipano"
-          >
-            <Code2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Código index.html</span>
-          </button>
-
-          {/* Botón Guía Live Server */}
-          <button
-            onClick={() => setShowGuideModal(true)}
-            className="flex items-center justify-center w-9 h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
-            title="Instrucciones: Cómo correr con Live Server y evitar CORS"
-          >
-            <HelpCircle className="w-4 h-4 text-cyan-400" />
-          </button>
-
-          {/* Botón Pantalla Completa */}
-          <button
-            onClick={toggleFullscreen}
-            className="flex items-center justify-center w-9 h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
-            title="Alternar Pantalla Completa"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
         </div>
       </header>
 
-      {/* 2. INSPECTOR DE CÁMARA (Pitch & Yaw en tiempo real) */}
-      <div className="absolute top-20 right-4 z-10 pointer-events-none hidden sm:flex flex-col items-end gap-2">
+      {/* 2. BARRA DE NAVEGACIÓN DE ESCENAS (CARRUSEL RESPONSIVO CON DESPLAZAMIENTO SUAVE) */}
+      <div className="absolute top-14 sm:top-16 left-0 right-0 z-20 pointer-events-none px-2 sm:px-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-center">
+          <div className="pointer-events-auto bg-neutral-900/90 backdrop-blur-xl border border-white/15 p-1 sm:p-1.5 rounded-2xl shadow-2xl flex items-center gap-1 max-w-full">
+            {/* Botón flecha izquierda para desplazamiento suave si hay overflow */}
+            <button
+              onClick={() => scrollScenes('left')}
+              className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors shrink-0"
+              title="Desplazar a la izquierda"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Contenedor de todas las escenas con scroll horizontal suave */}
+            <div
+              ref={sceneScrollRef}
+              className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth py-0.5 px-1 max-w-[85vw] sm:max-w-none"
+            >
+              {/* GRUPO 1: VISTA SUPERIOR */}
+              <button
+                onClick={() => handleSceneChange('vista-aerea')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl whitespace-nowrap transition-all border shrink-0 ${
+                  currentScene === 'vista-aerea'
+                    ? 'bg-amber-500 text-neutral-950 border-amber-300 shadow-md font-bold'
+                    : 'text-amber-400 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
+                }`}
+                title="Vista Superior Aérea 360°: Techo, pendientes y visuales cenitales"
+              >
+                <Navigation className="w-3 h-3" />
+                <span>Vista Superior 360°</span>
+              </button>
+
+              <div className="h-5 w-px bg-white/10 mx-1 shrink-0" />
+
+              {/* GRUPO 2: CARAS EXTERIORES */}
+              <span className="hidden md:inline text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-1 shrink-0">
+                Exterior:
+              </span>
+              <button
+                onClick={() => handleSceneChange('fachada-frontal')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'fachada-frontal'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                1. Frente
+              </button>
+              <button
+                onClick={() => handleSceneChange('fachada-lateral')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'fachada-lateral'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                2. Lateral
+              </button>
+              <button
+                onClick={() => handleSceneChange('fachada-trasera')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'fachada-trasera'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                3. Trasera
+              </button>
+              <button
+                onClick={() => handleSceneChange('fachada-esquina')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'fachada-esquina'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                4. Esquina L
+              </button>
+              <button
+                onClick={() => handleSceneChange('exterior-dusk')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'exterior-dusk'
+                    ? 'bg-amber-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                🌙 Noche
+              </button>
+
+              <div className="h-5 w-px bg-white/10 mx-1 shrink-0" />
+
+              {/* GRUPO 3: INTERIORES */}
+              <span className="hidden md:inline text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-1 shrink-0">
+                Interior:
+              </span>
+              <button
+                onClick={() => handleSceneChange('interior')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'interior'
+                    ? 'bg-cyan-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                Estar-Comedor
+              </button>
+              <button
+                onClick={() => handleSceneChange('interior-dormitorio')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'interior-dormitorio'
+                    ? 'bg-violet-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                Dormitorio
+              </button>
+              <button
+                onClick={() => handleSceneChange('interior-bano')}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap transition-all shrink-0 ${
+                  currentScene === 'interior-bano'
+                    ? 'bg-teal-600 text-white font-semibold shadow-sm'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                }`}
+              >
+                Baño
+              </button>
+            </div>
+
+            {/* Botón flecha derecha para desplazamiento suave */}
+            <button
+              onClick={() => scrollScenes('right')}
+              className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors shrink-0"
+              title="Desplazar a la derecha"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Menú desplegable rápido para móviles */}
+            <div className="relative sm:hidden shrink-0">
+              <button
+                onClick={() => setShowSceneDropdown(!showSceneDropdown)}
+                className="p-1.5 rounded-lg bg-neutral-800 text-neutral-300 hover:text-white text-xs flex items-center gap-1"
+                title="Ver lista de todas las escenas"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              {showSceneDropdown && (
+                <div className="absolute right-0 top-9 w-56 bg-neutral-900 border border-white/15 rounded-2xl shadow-2xl p-2 z-50 flex flex-col gap-1 text-xs">
+                  <div className="text-[10px] text-amber-400 font-bold px-2 py-0.5 uppercase tracking-wider">
+                    Vista Cenital
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('vista-aerea');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-2 rounded-xl text-left font-semibold ${
+                      currentScene === 'vista-aerea'
+                        ? 'bg-amber-500 text-black'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    🚁 Vista Superior 360°
+                  </button>
+
+                  <div className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 uppercase tracking-wider mt-1 border-t border-white/5 pt-1">
+                    Caras Exteriores
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-frontal');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'fachada-frontal'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    1. Frente Principal
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-lateral');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'fachada-lateral'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    2. Fachada Lateral
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-trasera');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'fachada-trasera'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    3. Fachada Trasera
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-esquina');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'fachada-esquina'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    4. Esquina y Patio
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('exterior-dusk');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'exterior-dusk'
+                        ? 'bg-amber-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    🌙 Exterior Noche
+                  </button>
+
+                  <div className="text-[10px] text-cyan-400 font-bold px-2 py-0.5 uppercase tracking-wider mt-1 border-t border-white/5 pt-1">
+                    Interiores 60 m²
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'interior'
+                        ? 'bg-cyan-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    🛋️ Estar - Comedor
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior-dormitorio');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'interior-dormitorio'
+                        ? 'bg-violet-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    🛏️ Dormitorio
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior-bano');
+                      setShowSceneDropdown(false);
+                    }}
+                    className={`p-1.5 rounded-xl text-left ${
+                      currentScene === 'interior-bano'
+                        ? 'bg-teal-600 text-white'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    🚿 Baño Completo
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. INSPECTOR DE CÁMARA (Pitch & Yaw en tiempo real) */}
+      <div className="absolute top-28 sm:top-32 right-4 z-10 pointer-events-none hidden sm:flex flex-col items-end gap-2">
         <div className="pointer-events-auto bg-neutral-900/85 backdrop-blur-md border border-white/10 px-3.5 py-2.5 rounded-2xl shadow-xl text-right">
           <div className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold flex items-center justify-end gap-1.5">
             <Compass className="w-3 h-3 text-cyan-400" />
@@ -1016,6 +1624,289 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* PLANO INTERACTIVO FLOTANTE (MINIMAP) - Click para teletransportarse */}
+      {showMinimap && (
+        <div
+          className={`absolute left-4 bottom-24 z-20 pointer-events-auto transition-all duration-300 bg-neutral-900/95 backdrop-blur-xl border border-white/15 rounded-3xl shadow-2xl overflow-hidden flex flex-col ${
+            isMinimapExpanded ? 'w-80 sm:w-96' : 'w-56 sm:w-64'
+          }`}
+        >
+          {/* Header del Minimap */}
+          <div className="p-3 bg-neutral-950/60 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-[11px] font-semibold text-white uppercase tracking-wider">
+                Plano Interactivo 60m²
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsMinimapExpanded(!isMinimapExpanded)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 text-[10px]"
+                title={isMinimapExpanded ? 'Reducir' : 'Ampliar plano'}
+              >
+                {isMinimapExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              </button>
+              <button
+                onClick={() => setShowMinimap(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"
+                title="Ocultar plano"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Acceso Rápido a Vista Superior 360° desde el Plano */}
+          <div className="w-full px-2.5 pt-2 pb-1 bg-neutral-950/70 border-b border-white/5">
+            <button
+              onClick={() => handleSceneChange('vista-aerea')}
+              className={`w-full py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
+                currentScene === 'vista-aerea'
+                  ? 'bg-amber-500 text-neutral-950 border-amber-300 shadow-md font-bold'
+                  : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border-amber-500/30'
+              }`}
+              title="Ver Vista Aérea 360° desde arriba de la casa"
+            >
+              <Navigation className={`w-3.5 h-3.5 ${currentScene === 'vista-aerea' ? 'text-neutral-950 animate-bounce' : 'text-amber-400'}`} />
+              <span>🚁 Vista Superior 360° (Techo)</span>
+            </button>
+          </div>
+
+          {/* SVG del plano arquitectónico interactivo */}
+          <div className="p-2 sm:p-3 relative bg-neutral-950/90 flex flex-col items-center">
+            <svg
+              viewBox="0 0 420 540"
+              className="w-full h-auto max-h-60 sm:max-h-72 select-none"
+            >
+              {/* Contorno perimetral */}
+              <path
+                d="M 60 160 L 60 490 L 190 490 L 190 380 L 340 380 L 340 50 L 210 50 L 210 160 Z"
+                stroke="#64748b"
+                strokeWidth="2.5"
+                fill="#1e293b"
+                fillOpacity="0.4"
+              />
+
+              {/* VISTA AÉREA EN EL PLANO (Ícono Dron / Techo) */}
+              <g
+                onClick={() => handleSceneChange('vista-aerea')}
+                className="cursor-pointer group"
+              >
+                <circle
+                  cx="200"
+                  cy="270"
+                  r="16"
+                  className={`transition-all ${
+                    currentScene === 'vista-aerea'
+                      ? 'fill-amber-500 stroke-white stroke-2 shadow-lg'
+                      : 'fill-neutral-900/90 stroke-amber-400 hover:fill-amber-600 stroke-1'
+                  }`}
+                />
+                <text x="200" y="274" fill="#ffffff" fontSize="12" textAnchor="middle">🚁</text>
+                <text x="200" y="297" fill="#fde68a" fontSize="8" fontWeight="bold" textAnchor="middle">
+                  Aérea
+                </text>
+              </g>
+
+              {/* ÁREA INTERACTIVA 1: LIVING / COMEDOR */}
+              <g
+                onClick={() => handleSceneChange('interior')}
+                className="cursor-pointer group"
+              >
+                <rect
+                  x="65"
+                  y="215"
+                  width="120"
+                  height="265"
+                  rx="6"
+                  className={`transition-all duration-200 ${
+                    currentScene === 'interior'
+                      ? 'fill-emerald-500/35 stroke-emerald-400 stroke-2'
+                      : 'fill-emerald-950/30 stroke-emerald-600/40 hover:fill-emerald-500/25 stroke-1'
+                  }`}
+                />
+                {/* Muebles esquemáticos del plano */}
+                <rect x="85" y="270" width="75" height="50" rx="3" stroke="#6ee7b7" strokeWidth="1" fill="#065f46" fillOpacity="0.3" />
+                <rect x="85" y="370" width="75" height="40" rx="3" stroke="#6ee7b7" strokeWidth="1" fill="#065f46" fillOpacity="0.3" />
+                <text x="125" y="250" fill="#a7f3d0" fontSize="12" fontWeight="bold" textAnchor="middle">
+                  Estar - Comedor
+                </text>
+                <text x="125" y="350" fill="#6ee7b7" fontSize="10" textAnchor="middle">
+                  3.80 × 6.60m
+                </text>
+                {/* Indicador de cámara si está activo */}
+                {currentScene === 'interior' && (
+                  <circle cx="125" cy="330" r="7" fill="#10b981" stroke="#ffffff" strokeWidth="2" className="animate-pulse" />
+                )}
+              </g>
+
+              {/* ÁREA INTERACTIVA 2: COCINA INTEGRADA */}
+              <g
+                onClick={() => handleSceneChange('interior')}
+                className="cursor-pointer group"
+              >
+                <rect
+                  x="70"
+                  y="165"
+                  width="115"
+                  height="45"
+                  rx="4"
+                  className="fill-amber-500/20 stroke-amber-400/50 hover:fill-amber-500/35 stroke-1 transition-all"
+                />
+                <circle cx="150" cy="188" r="8" stroke="#fbbf24" strokeWidth="1" fill="none" />
+                <circle cx="170" cy="188" r="8" stroke="#fbbf24" strokeWidth="1" fill="none" />
+                <text x="110" y="192" fill="#fde68a" fontSize="10" textAnchor="middle">
+                  Cocina
+                </text>
+              </g>
+
+              {/* ÁREA INTERACTIVA 3: BAÑO */}
+              <g
+                onClick={() => handleSceneChange('interior-bano')}
+                className="cursor-pointer group"
+              >
+                <rect
+                  x="245"
+                  y="195"
+                  width="90"
+                  height="80"
+                  rx="5"
+                  className={`transition-all duration-200 ${
+                    currentScene === 'interior-bano'
+                      ? 'fill-cyan-500/35 stroke-cyan-400 stroke-2'
+                      : 'fill-cyan-950/30 stroke-cyan-600/40 hover:fill-cyan-500/25 stroke-1'
+                  }`}
+                />
+                <circle cx="270" cy="225" r="9" stroke="#67e8f9" strokeWidth="1" fill="none" />
+                <rect x="290" y="210" width="35" height="50" rx="3" stroke="#67e8f9" strokeWidth="1" fill="none" />
+                <text x="290" y="250" fill="#a5f3fc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                  Baño
+                </text>
+                <text x="290" y="265" fill="#67e8f9" fontSize="9" textAnchor="middle">
+                  2.30 × 1.60m
+                </text>
+                {currentScene === 'interior-bano' && (
+                  <circle cx="290" cy="235" r="7" fill="#06b6d4" stroke="#ffffff" strokeWidth="2" className="animate-pulse" />
+                )}
+              </g>
+
+              {/* ÁREA INTERACTIVA 4: DORMITORIO PRINCIPAL */}
+              <g
+                onClick={() => handleSceneChange('interior-dormitorio')}
+                className="cursor-pointer group"
+              >
+                <rect
+                  x="215"
+                  y="55"
+                  width="120"
+                  height="135"
+                  rx="6"
+                  className={`transition-all duration-200 ${
+                    currentScene === 'interior-dormitorio'
+                      ? 'fill-violet-500/35 stroke-violet-400 stroke-2'
+                      : 'fill-violet-950/30 stroke-violet-600/40 hover:fill-violet-500/25 stroke-1'
+                  }`}
+                />
+                {/* Cama 2 plazas */}
+                <rect x="235" y="70" width="80" height="95" rx="4" stroke="#c4b5fd" strokeWidth="1" fill="#4c1d95" fillOpacity="0.3" />
+                <text x="275" y="115" fill="#ddd6fe" fontSize="12" fontWeight="bold" textAnchor="middle">
+                  Dormitorio
+                </text>
+                <text x="275" y="135" fill="#a78bfa" fontSize="10" textAnchor="middle">
+                  3.70 × 3.50m
+                </text>
+                {currentScene === 'interior-dormitorio' && (
+                  <circle cx="275" cy="115" r="7" fill="#8b5cf6" stroke="#ffffff" strokeWidth="2" className="animate-pulse" />
+                )}
+              </g>
+
+              {/* PUNTOS EXTERIORES CLICKEABLES ALREDEDOR DEL PERÍMETRO */}
+              {/* Fachada 1. Frente */}
+              <g
+                onClick={() => handleSceneChange('fachada-frontal')}
+                className="cursor-pointer group"
+              >
+                <circle
+                  cx="125"
+                  cy="515"
+                  r="12"
+                  className={`transition-all ${
+                    currentScene === 'fachada-frontal'
+                      ? 'fill-emerald-500 stroke-white stroke-2'
+                      : 'fill-neutral-900 stroke-emerald-400 hover:fill-emerald-600 stroke-1'
+                  }`}
+                />
+                <text x="125" y="519" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">1</text>
+                <text x="125" y="534" fill="#a7f3d0" fontSize="8" fontWeight="bold" textAnchor="middle">Frente</text>
+              </g>
+
+              {/* Fachada 2. Lateral Galería */}
+              <g
+                onClick={() => handleSceneChange('fachada-lateral')}
+                className="cursor-pointer group"
+              >
+                <circle
+                  cx="35"
+                  cy="325"
+                  r="12"
+                  className={`transition-all ${
+                    currentScene === 'fachada-lateral'
+                      ? 'fill-emerald-500 stroke-white stroke-2'
+                      : 'fill-neutral-900 stroke-emerald-400 hover:fill-emerald-600 stroke-1'
+                  }`}
+                />
+                <text x="35" y="329" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">2</text>
+                <text x="35" y="344" fill="#a7f3d0" fontSize="8" fontWeight="bold" textAnchor="middle">Lateral</text>
+              </g>
+
+              {/* Fachada 3. Trasera / Jardín */}
+              <g
+                onClick={() => handleSceneChange('fachada-trasera')}
+                className="cursor-pointer group"
+              >
+                <circle
+                  cx="275"
+                  cy="25"
+                  r="12"
+                  className={`transition-all ${
+                    currentScene === 'fachada-trasera'
+                      ? 'fill-emerald-500 stroke-white stroke-2'
+                      : 'fill-neutral-900 stroke-emerald-400 hover:fill-emerald-600 stroke-1'
+                  }`}
+                />
+                <text x="275" y="29" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">3</text>
+                <text x="275" y="44" fill="#a7f3d0" fontSize="8" fontWeight="bold" textAnchor="middle">Trasera</text>
+              </g>
+
+              {/* Fachada 4. Esquina L */}
+              <g
+                onClick={() => handleSceneChange('fachada-esquina')}
+                className="cursor-pointer group"
+              >
+                <circle
+                  cx="365"
+                  cy="215"
+                  r="12"
+                  className={`transition-all ${
+                    currentScene === 'fachada-esquina'
+                      ? 'fill-emerald-500 stroke-white stroke-2'
+                      : 'fill-neutral-900 stroke-emerald-400 hover:fill-emerald-600 stroke-1'
+                  }`}
+                />
+                <text x="365" y="219" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">4</text>
+                <text x="365" y="234" fill="#a7f3d0" fontSize="8" fontWeight="bold" textAnchor="middle">Esquina</text>
+              </g>
+            </svg>
+
+            {/* Ayuda de navegación táctil / clic */}
+            <div className="w-full text-center text-[10px] text-neutral-400 mt-1 border-t border-white/5 pt-1.5 flex items-center justify-between">
+              <span>Haz clic en una habitación o cara para ver su 360°</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. BARRA DE CONTROLES INFERIOR FLOTANTE (HUD) */}
       <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-[94%] max-w-xl">
@@ -1064,8 +1955,21 @@ export default function App() {
             </button>
           </div>
 
-          {/* Toggle Hotspots */}
+          {/* Toggle Hotspots y Minimap */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMinimap(!showMinimap)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                showMinimap
+                  ? 'bg-emerald-600/80 text-white shadow-md'
+                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+              }`}
+              title="Mostrar u ocultar el plano interactivo en pantalla"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{showMinimap ? 'Plano ON' : 'Plano OFF'}</span>
+            </button>
+
             <button
               onClick={() => setHotspotsEnabled(!hotspotsEnabled)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
@@ -1324,45 +2228,123 @@ export default function App() {
                 <div className="w-full max-w-md aspect-3/4 relative flex items-center justify-center border border-white/5 rounded-xl bg-neutral-900/50 p-3">
                   <svg
                     viewBox="0 0 420 540"
-                    className="w-full h-full text-neutral-300 stroke-neutral-400"
+                    className="w-full h-full text-neutral-300 stroke-neutral-400 select-none"
                     fill="none"
                     strokeWidth="2"
                   >
+                    {/* Contorno perimetral */}
                     <path
                       d="M 60 160 L 60 490 L 190 490 L 190 380 L 340 380 L 340 50 L 210 50 L 210 160 Z"
                       stroke="#10b981"
-                      strokeWidth="3"
+                      strokeWidth="2.5"
                       fill="#064e3b"
                       fillOpacity="0.15"
                     />
-                    <rect x="250" y="200" width="80" height="70" stroke="#94a3b8" strokeDasharray="3 3" />
-                    <text x="290" y="240" fill="#94a3b8" fontSize="10" textAnchor="middle">
-                      Baño 2.30x1.60
-                    </text>
-                    <rect x="220" y="60" width="110" height="130" stroke="#60a5fa" strokeDasharray="3 3" />
-                    <text x="275" y="130" fill="#60a5fa" fontSize="11" textAnchor="middle">
-                      Dormitorio 3.70 x 3.50
-                    </text>
-                    <rect x="70" y="220" width="130" height="250" stroke="#34d399" strokeDasharray="3 3" />
-                    <text x="135" y="320" fill="#34d399" fontSize="11" textAnchor="middle">
-                      Estar - Comedor
-                    </text>
-                    <text x="135" y="340" fill="#6ee7b7" fontSize="10" textAnchor="middle">
-                      3.80 x 6.60 m
-                    </text>
-                    <rect x="75" y="170" width="125" height="35" stroke="#f59e0b" fill="#f59e0b" fillOpacity="0.2" />
-                    <text x="137" y="192" fill="#fbbf24" fontSize="10" textAnchor="middle">
-                      Cocina integrada
-                    </text>
-                    <circle cx="135" cy="300" r="10" fill="#10b981" fillOpacity="0.4" stroke="#10b981" strokeWidth="2" />
-                    <circle cx="135" cy="300" r="3" fill="#ffffff" />
-                    <text x="135" y="280" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">
-                      Punto de Cámara 360°
-                    </text>
+
+                    {/* Baño interactivo */}
+                    <g
+                      onClick={() => {
+                        handleSceneChange('interior-bano');
+                        setShowPlanModal(false);
+                      }}
+                      className="cursor-pointer group"
+                    >
+                      <rect
+                        x="245"
+                        y="195"
+                        width="90"
+                        height="80"
+                        rx="5"
+                        className={`transition-all ${
+                          currentScene === 'interior-bano'
+                            ? 'fill-cyan-500/40 stroke-cyan-400 stroke-2'
+                            : 'fill-cyan-950/40 stroke-cyan-500/50 hover:fill-cyan-500/30'
+                        }`}
+                      />
+                      <text x="290" y="235" fill="#a5f3fc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                        Baño
+                      </text>
+                      <text x="290" y="252" fill="#67e8f9" fontSize="9" textAnchor="middle">
+                        2.30 × 1.60m
+                      </text>
+                      <circle cx="290" cy="265" r="4" fill="#06b6d4" />
+                    </g>
+
+                    {/* Dormitorio interactivo */}
+                    <g
+                      onClick={() => {
+                        handleSceneChange('interior-dormitorio');
+                        setShowPlanModal(false);
+                      }}
+                      className="cursor-pointer group"
+                    >
+                      <rect
+                        x="215"
+                        y="55"
+                        width="120"
+                        height="135"
+                        rx="6"
+                        className={`transition-all ${
+                          currentScene === 'interior-dormitorio'
+                            ? 'fill-violet-500/40 stroke-violet-400 stroke-2'
+                            : 'fill-violet-950/40 stroke-violet-500/50 hover:fill-violet-500/30'
+                        }`}
+                      />
+                      <text x="275" y="115" fill="#ddd6fe" fontSize="12" fontWeight="bold" textAnchor="middle">
+                        Dormitorio
+                      </text>
+                      <text x="275" y="135" fill="#a78bfa" fontSize="10" textAnchor="middle">
+                        3.70 × 3.50m
+                      </text>
+                      <circle cx="275" cy="150" r="4" fill="#8b5cf6" />
+                    </g>
+
+                    {/* Estar - Comedor interactivo */}
+                    <g
+                      onClick={() => {
+                        handleSceneChange('interior');
+                        setShowPlanModal(false);
+                      }}
+                      className="cursor-pointer group"
+                    >
+                      <rect
+                        x="65"
+                        y="215"
+                        width="120"
+                        height="265"
+                        rx="6"
+                        className={`transition-all ${
+                          currentScene === 'interior'
+                            ? 'fill-emerald-500/40 stroke-emerald-400 stroke-2'
+                            : 'fill-emerald-950/40 stroke-emerald-500/50 hover:fill-emerald-500/30'
+                        }`}
+                      />
+                      <text x="125" y="310" fill="#a7f3d0" fontSize="12" fontWeight="bold" textAnchor="middle">
+                        Estar - Comedor
+                      </text>
+                      <text x="125" y="330" fill="#6ee7b7" fontSize="10" textAnchor="middle">
+                        3.80 × 6.60 m
+                      </text>
+                      <circle cx="125" cy="355" r="5" fill="#10b981" />
+                    </g>
+
+                    {/* Cocina integrada */}
+                    <g
+                      onClick={() => {
+                        handleSceneChange('interior');
+                        setShowPlanModal(false);
+                      }}
+                      className="cursor-pointer group"
+                    >
+                      <rect x="70" y="165" width="115" height="45" rx="4" className="fill-amber-500/20 stroke-amber-400 hover:fill-amber-500/40" />
+                      <text x="125" y="192" fill="#fbbf24" fontSize="10" fontWeight="bold" textAnchor="middle">
+                        Cocina integrada
+                      </text>
+                    </g>
                   </svg>
                 </div>
                 <span className="text-[11px] text-neutral-400 mt-2">
-                  Esquema de distribución arquitectónica según la planimetría de Viviendas Trato Hecho
+                  Toca cualquier habitación en el plano para transportarte a su render 360°
                 </span>
               </div>
 
@@ -1382,6 +2364,145 @@ export default function App() {
                 <div className="bg-neutral-950 p-3 rounded-xl border border-white/5 text-center">
                   <div className="text-[10px] uppercase text-neutral-400">Baño</div>
                   <div className="text-sm font-semibold text-white mt-0.5">2.30 × 1.60 m</div>
+                </div>
+              </div>
+
+              {/* Selector directo de interiores y exteriores */}
+              <div className="space-y-3 pt-2 border-t border-white/10">
+                {/* Vista Superior Aérea Cenital */}
+                <div className="bg-amber-950/40 border border-amber-500/30 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+                      <Navigation className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-amber-300">
+                        🚁 Vista Superior 360° (Perspectiva Cenital / Dron)
+                      </div>
+                      <div className="text-[11px] text-neutral-400">
+                        Visualiza toda la propiedad desde arriba: cubierta de techos, pérgola, jardín y entorno en 360°.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('vista-aerea');
+                      setShowPlanModal(false);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold shadow-md shrink-0 transition-all"
+                  >
+                    Ver Vista Aérea
+                  </button>
+                </div>
+
+                <div className="text-xs font-semibold text-white pt-1">
+                  Áreas Interiores (Planimetría):
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'interior'
+                        ? 'bg-emerald-950 border-emerald-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-emerald-400">Estar - Comedor</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">3.80 × 6.60 m</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior-dormitorio');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'interior-dormitorio'
+                        ? 'bg-violet-950 border-violet-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-violet-400">Dormitorio</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">3.70 × 3.50 m</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('interior-bano');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'interior-bano'
+                        ? 'bg-cyan-950 border-cyan-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-cyan-400">Baño Completo</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">2.30 × 1.60 m</div>
+                  </button>
+                </div>
+
+                <div className="text-xs font-semibold text-white pt-2">
+                  Caras Exteriores de la Vivienda:
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-frontal');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'fachada-frontal'
+                        ? 'bg-emerald-950 border-emerald-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-emerald-400">1. Fachada Frontal</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">Pérgola, Puerta y Cochera</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-lateral');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'fachada-lateral'
+                        ? 'bg-emerald-950 border-emerald-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-emerald-400">2. Fachada Lateral</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">Galería con ventanal corredizo</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-trasera');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'fachada-trasera'
+                        ? 'bg-emerald-950 border-emerald-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-emerald-400">3. Fachada Trasera</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">Contrafrente hacia jardín</div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSceneChange('fachada-esquina');
+                      setShowPlanModal(false);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      currentScene === 'fachada-esquina'
+                        ? 'bg-emerald-950 border-emerald-400'
+                        : 'bg-neutral-950 hover:bg-neutral-800 border-white/5'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-emerald-400">4. Esquina y Patio</div>
+                    <div className="text-[10px] text-neutral-400 mt-0.5">Volumen en L y sendero</div>
+                  </button>
                 </div>
               </div>
             </div>
