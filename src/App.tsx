@@ -457,6 +457,8 @@ export default function App() {
   const [codeTab, setCodeTab] = useState<'marzipano' | 'pannellum'>('marzipano');
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [planViewMode, setPlanViewMode] = useState<'3d-cutaway' | '2d'>('3d-cutaway');
+  const [isCutawayZoomed, setIsCutawayZoomed] = useState(false);
   const [showAddHotspotModal, setShowAddHotspotModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedCoords, setCopiedCoords] = useState(false);
@@ -1249,16 +1251,30 @@ export default function App() {
               className="hidden"
             />
 
+            {/* Botón Corte Isométrico 3D Arquitectónico */}
+            <button
+              onClick={() => {
+                setPlanViewMode('3d-cutaway');
+                setShowPlanModal(true);
+              }}
+              className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-amber-300 hover:text-white border border-amber-500/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
+              title="Ver Corte Isométrico 3D (Render Arquitectónico en L)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Corte 3D</span>
+            </button>
+
             {/* Botón Plano Arquitectónico de referencia */}
             <button
               onClick={() => {
+                setPlanViewMode('2d');
                 setShowMinimap(true);
                 setShowPlanModal(true);
               }}
               className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
-              title="Ver Plano Arquitectónico (60 m²)"
+              title="Ver Plano Arquitectónico 2D (60 m²)"
             >
-              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <Layers className="w-3.5 h-3.5 text-emerald-400" />
               <span className="hidden sm:inline">Plano</span>
             </button>
 
@@ -2197,24 +2213,52 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. MODAL: PLANO ARQUITECTÓNICO & DATOS DEL PROYECTO */}
+      {/* 6. MODAL: PLANO ARQUITECTÓNICO & CORTE ISOMÉTRICO 3D */}
       {showPlanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/85 backdrop-blur-lg">
-          <div className="bg-neutral-900 border border-white/10 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-white/10 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-neutral-950/85 backdrop-blur-lg">
+          <div className="bg-neutral-900 border border-white/10 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header del modal con selector de vista */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-neutral-950/60">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-white">
-                    Viviendas Trato Hecho • Módulo 2
+                  <h2 className="text-sm sm:text-base font-semibold text-white">
+                    Planimetría y Render Arquitectónico 3D
                   </h2>
                   <p className="text-xs text-neutral-400">
-                    Planta Arquitectónica 60 m² (1 Dormitorio / Estar-Comedor / Baño)
+                    Vivienda Modular en L • Una Sola Planta (Single-Story • 60 m²)
                   </p>
                 </div>
               </div>
+
+              {/* Selector de Pestañas: Corte 3D vs Planta 2D CAD */}
+              <div className="flex items-center bg-neutral-950 p-1 rounded-xl border border-white/10">
+                <button
+                  onClick={() => setPlanViewMode('3d-cutaway')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+                    planViewMode === '3d-cutaway'
+                      ? 'bg-amber-500 text-neutral-950 shadow-md font-bold'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Corte Isométrico 3D</span>
+                </button>
+                <button
+                  onClick={() => setPlanViewMode('2d')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+                    planViewMode === '2d'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Planta 2D CAD</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => setShowPlanModal(false)}
                 className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800"
@@ -2223,130 +2267,232 @@ export default function App() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 text-xs text-neutral-300">
-              <div className="bg-neutral-950 p-4 rounded-2xl border border-white/10 flex flex-col items-center">
-                <div className="w-full max-w-md aspect-3/4 relative flex items-center justify-center border border-white/5 rounded-xl bg-neutral-900/50 p-3">
-                  <svg
-                    viewBox="0 0 420 540"
-                    className="w-full h-full text-neutral-300 stroke-neutral-400 select-none"
-                    fill="none"
-                    strokeWidth="2"
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs text-neutral-300">
+              {/* VISTA 1: CORTE ISOMÉTRICO 3D ARQUITECTÓNICO (PLANTA BAJA ÚNICA) */}
+              {planViewMode === '3d-cutaway' && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div
+                    onClick={() => setIsCutawayZoomed(true)}
+                    className="relative rounded-2xl overflow-hidden border border-white/15 bg-neutral-950 shadow-2xl group cursor-zoom-in"
+                    title="Haz clic para ver el render en pantalla completa a alta resolución"
                   >
-                    {/* Contorno perimetral */}
-                    <path
-                      d="M 60 160 L 60 490 L 190 490 L 190 380 L 340 380 L 340 50 L 210 50 L 210 160 Z"
-                      stroke="#10b981"
-                      strokeWidth="2.5"
-                      fill="#064e3b"
-                      fillOpacity="0.15"
+                    <img
+                      src="/corte-isometrico-3d.jpg"
+                      alt="Corte Isométrico 3D de Casa en L - Estrictamente Planta Baja Única"
+                      className="w-full h-auto max-h-[52vh] object-contain mx-auto rounded-2xl transition-transform duration-300 group-hover:scale-[1.01]"
                     />
+                    <div className="absolute top-3 left-3 bg-neutral-950/85 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl text-[10px] text-amber-300 font-semibold tracking-wider uppercase flex items-center gap-1.5 shadow-lg">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Corte 3D • Solo Planta Baja</span>
+                    </div>
+                    <div className="absolute top-3 right-3 bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 backdrop-blur-md px-2.5 py-1.5 rounded-xl text-[10px] font-bold shadow-lg flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span>100% Planta Baja (Sin Piso Alto)</span>
+                    </div>
+                    <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-neutral-300 border border-white/10 px-2.5 py-1 rounded-lg text-[10px] flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <Maximize2 className="w-3 h-3" />
+                      <span>Ampliar Render</span>
+                    </div>
+                  </div>
 
-                    {/* Baño interactivo */}
-                    <g
-                      onClick={() => {
-                        handleSceneChange('interior-bano');
-                        setShowPlanModal(false);
-                      }}
-                      className="cursor-pointer group"
+                  {/* Modal de Imagen Ampliada (Lightbox) */}
+                  {isCutawayZoomed && (
+                    <div
+                      onClick={() => setIsCutawayZoomed(false)}
+                      className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-3 sm:p-6 cursor-zoom-out animate-in fade-in zoom-in-95 duration-200"
                     >
-                      <rect
-                        x="245"
-                        y="195"
-                        width="90"
-                        height="80"
-                        rx="5"
-                        className={`transition-all ${
-                          currentScene === 'interior-bano'
-                            ? 'fill-cyan-500/40 stroke-cyan-400 stroke-2'
-                            : 'fill-cyan-950/40 stroke-cyan-500/50 hover:fill-cyan-500/30'
-                        }`}
-                      />
-                      <text x="290" y="235" fill="#a5f3fc" fontSize="11" fontWeight="bold" textAnchor="middle">
-                        Baño
-                      </text>
-                      <text x="290" y="252" fill="#67e8f9" fontSize="9" textAnchor="middle">
-                        2.30 × 1.60m
-                      </text>
-                      <circle cx="290" cy="265" r="4" fill="#06b6d4" />
-                    </g>
+                      <div className="relative max-w-6xl max-h-[92vh] flex flex-col items-center">
+                        <img
+                          src="/corte-isometrico-3d.jpg"
+                          alt="Corte Isométrico 3D - Vista Ampliada Planta Baja"
+                          className="w-full h-auto max-h-[84vh] object-contain rounded-2xl shadow-2xl border border-white/20"
+                        />
+                        <div className="mt-3 flex items-center justify-between w-full text-xs text-neutral-300 px-2">
+                          <span className="font-semibold text-amber-400">
+                            Render Isométrico 3D Arquitectónico • Planta Baja Única (Sin primer piso / Sin niveles superiores)
+                          </span>
+                          <span className="text-neutral-400 bg-neutral-800/80 px-3 py-1 rounded-full text-[11px]">
+                            Toca en cualquier parte para cerrar ✕
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Dormitorio interactivo */}
-                    <g
-                      onClick={() => {
-                        handleSceneChange('interior-dormitorio');
-                        setShowPlanModal(false);
-                      }}
-                      className="cursor-pointer group"
-                    >
-                      <rect
-                        x="215"
-                        y="55"
-                        width="120"
-                        height="135"
-                        rx="6"
-                        className={`transition-all ${
-                          currentScene === 'interior-dormitorio'
-                            ? 'fill-violet-500/40 stroke-violet-400 stroke-2'
-                            : 'fill-violet-950/40 stroke-violet-500/50 hover:fill-violet-500/30'
-                        }`}
-                      />
-                      <text x="275" y="115" fill="#ddd6fe" fontSize="12" fontWeight="bold" textAnchor="middle">
-                        Dormitorio
-                      </text>
-                      <text x="275" y="135" fill="#a78bfa" fontSize="10" textAnchor="middle">
-                        3.70 × 3.50m
-                      </text>
-                      <circle cx="275" cy="150" r="4" fill="#8b5cf6" />
-                    </g>
+                  {/* Ficha técnica y distribución del corte 3D */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-neutral-950 p-3.5 rounded-2xl border border-white/10 space-y-2">
+                      <div className="text-amber-400 font-bold text-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                        Sector Izquierdo (Concepto Abierto):
+                      </div>
+                      <p className="text-[11px] text-neutral-300 leading-relaxed">
+                        • <strong>Estar - Comedor (3.80m × 6.60m):</strong> Conectado a la entrada principal con gran ventanal DVH hacia el exterior.
+                        <br />
+                        • <strong>Cocina lineal al fondo:</strong> Mesada corrida con bacha, anafe y espacio de guardado.
+                        <br />
+                        • <strong>Comedor central:</strong> Mesa para 6 personas con iluminación cenital y acceso lateral.
+                      </p>
+                    </div>
 
-                    {/* Estar - Comedor interactivo */}
-                    <g
-                      onClick={() => {
-                        handleSceneChange('interior');
-                        setShowPlanModal(false);
-                      }}
-                      className="cursor-pointer group"
-                    >
-                      <rect
-                        x="65"
-                        y="215"
-                        width="120"
-                        height="265"
-                        rx="6"
-                        className={`transition-all ${
-                          currentScene === 'interior'
-                            ? 'fill-emerald-500/40 stroke-emerald-400 stroke-2'
-                            : 'fill-emerald-950/40 stroke-emerald-500/50 hover:fill-emerald-500/30'
-                        }`}
-                      />
-                      <text x="125" y="310" fill="#a7f3d0" fontSize="12" fontWeight="bold" textAnchor="middle">
-                        Estar - Comedor
-                      </text>
-                      <text x="125" y="330" fill="#6ee7b7" fontSize="10" textAnchor="middle">
-                        3.80 × 6.60 m
-                      </text>
-                      <circle cx="125" cy="355" r="5" fill="#10b981" />
-                    </g>
+                    <div className="bg-neutral-950 p-3.5 rounded-2xl border border-white/10 space-y-2">
+                      <div className="text-cyan-400 font-bold text-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        Sector Derecho (Área Privada):
+                      </div>
+                      <p className="text-[11px] text-neutral-300 leading-relaxed">
+                        • <strong>Pasillo distribuidor central (0.90m):</strong> Acceso independiente a baño y dormitorios.
+                        <br />
+                        • <strong>Baño completo central (2.30m × 1.60m):</strong> Vanitory flotante, box de ducha y sanitarios.
+                        <br />
+                        • <strong>Dormitorios simétricos (3.30m × 3.35m c/u):</strong> Flanqueando el baño con camas de 2 plazas, placares y ventanas.
+                      </p>
+                    </div>
+                  </div>
 
-                    {/* Cocina integrada */}
-                    <g
-                      onClick={() => {
-                        handleSceneChange('interior');
-                        setShowPlanModal(false);
-                      }}
-                      className="cursor-pointer group"
-                    >
-                      <rect x="70" y="165" width="115" height="45" rx="4" className="fill-amber-500/20 stroke-amber-400 hover:fill-amber-500/40" />
-                      <text x="125" y="192" fill="#fbbf24" fontSize="10" fontWeight="bold" textAnchor="middle">
-                        Cocina integrada
-                      </text>
-                    </g>
-                  </svg>
+                  {/* Especificaciones de Materialidad y Regla Estricta */}
+                  <div className="bg-neutral-950/80 p-3.5 rounded-2xl border border-white/5 space-y-1.5">
+                    <div className="text-emerald-400 font-bold text-xs flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Especificaciones Arquitectónicas & Reglas de Diseño:</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      • <strong>Volumetría y Fachadas:</strong> Arquitectura moderna minimalista en "L" con cubierta plana y pretiles limpios, revestimiento en piedra natural rústica y listones de madera, grandes ventanales con carpintería de aluminio negro.
+                      <br />
+                      • <strong>Interiores Seccionados:</strong> Pisos cálidos de madera flotante, tabiquería interna de yeso y excelente iluminación natural diurna.
+                      <br />
+                      • <strong>Regla Estricta:</strong> Estrictamente una sola planta (planta baja sin desniveles, sin segunda planta, sin escaleras interiores).
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[11px] text-neutral-400 mt-2">
-                  Toca cualquier habitación en el plano para transportarte a su render 360°
-                </span>
-              </div>
+              )}
+
+              {/* VISTA 2: PLANO 2D CAD INTERACTIVO */}
+              {planViewMode === '2d' && (
+                <div className="bg-neutral-950 p-4 rounded-2xl border border-white/10 flex flex-col items-center animate-in fade-in duration-200">
+                  <div className="w-full max-w-md aspect-3/4 relative flex items-center justify-center border border-white/5 rounded-xl bg-neutral-900/50 p-3">
+                    <svg
+                      viewBox="0 0 420 540"
+                      className="w-full h-full text-neutral-300 stroke-neutral-400 select-none"
+                      fill="none"
+                      strokeWidth="2"
+                    >
+                      {/* Contorno perimetral */}
+                      <path
+                        d="M 60 160 L 60 490 L 190 490 L 190 380 L 340 380 L 340 50 L 210 50 L 210 160 Z"
+                        stroke="#10b981"
+                        strokeWidth="2.5"
+                        fill="#064e3b"
+                        fillOpacity="0.15"
+                      />
+
+                      {/* Baño interactivo */}
+                      <g
+                        onClick={() => {
+                          handleSceneChange('interior-bano');
+                          setShowPlanModal(false);
+                        }}
+                        className="cursor-pointer group"
+                      >
+                        <rect
+                          x="245"
+                          y="195"
+                          width="90"
+                          height="80"
+                          rx="5"
+                          className={`transition-all ${
+                            currentScene === 'interior-bano'
+                              ? 'fill-cyan-500/40 stroke-cyan-400 stroke-2'
+                              : 'fill-cyan-950/40 stroke-cyan-500/50 hover:fill-cyan-500/30'
+                          }`}
+                        />
+                        <text x="290" y="235" fill="#a5f3fc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                          Baño
+                        </text>
+                        <text x="290" y="252" fill="#67e8f9" fontSize="9" textAnchor="middle">
+                          2.30 × 1.60m
+                        </text>
+                        <circle cx="290" cy="265" r="4" fill="#06b6d4" />
+                      </g>
+
+                      {/* Dormitorio interactivo */}
+                      <g
+                        onClick={() => {
+                          handleSceneChange('interior-dormitorio');
+                          setShowPlanModal(false);
+                        }}
+                        className="cursor-pointer group"
+                      >
+                        <rect
+                          x="215"
+                          y="55"
+                          width="120"
+                          height="135"
+                          rx="6"
+                          className={`transition-all ${
+                            currentScene === 'interior-dormitorio'
+                              ? 'fill-violet-500/40 stroke-violet-400 stroke-2'
+                              : 'fill-violet-950/40 stroke-violet-500/50 hover:fill-violet-500/30'
+                          }`}
+                        />
+                        <text x="275" y="115" fill="#ddd6fe" fontSize="12" fontWeight="bold" textAnchor="middle">
+                          Dormitorio
+                        </text>
+                        <text x="275" y="135" fill="#a78bfa" fontSize="10" textAnchor="middle">
+                          3.70 × 3.50m
+                        </text>
+                        <circle cx="275" cy="150" r="4" fill="#8b5cf6" />
+                      </g>
+
+                      {/* Estar - Comedor interactivo */}
+                      <g
+                        onClick={() => {
+                          handleSceneChange('interior');
+                          setShowPlanModal(false);
+                        }}
+                        className="cursor-pointer group"
+                      >
+                        <rect
+                          x="65"
+                          y="215"
+                          width="120"
+                          height="265"
+                          rx="6"
+                          className={`transition-all ${
+                            currentScene === 'interior'
+                              ? 'fill-emerald-500/40 stroke-emerald-400 stroke-2'
+                              : 'fill-emerald-950/40 stroke-emerald-500/50 hover:fill-emerald-500/30'
+                          }`}
+                        />
+                        <text x="125" y="310" fill="#a7f3d0" fontSize="12" fontWeight="bold" textAnchor="middle">
+                          Estar - Comedor
+                        </text>
+                        <text x="125" y="330" fill="#6ee7b7" fontSize="10" textAnchor="middle">
+                          3.80 × 6.60 m
+                        </text>
+                        <circle cx="125" cy="355" r="5" fill="#10b981" />
+                      </g>
+
+                      {/* Cocina integrada */}
+                      <g
+                        onClick={() => {
+                          handleSceneChange('interior');
+                          setShowPlanModal(false);
+                        }}
+                        className="cursor-pointer group"
+                      >
+                        <rect x="70" y="165" width="115" height="45" rx="4" className="fill-amber-500/20 stroke-amber-400 hover:fill-amber-500/40" />
+                        <text x="125" y="192" fill="#fbbf24" fontSize="10" fontWeight="bold" textAnchor="middle">
+                          Cocina integrada
+                        </text>
+                      </g>
+                    </svg>
+                  </div>
+                  <span className="text-[11px] text-neutral-400 mt-2">
+                    Toca cualquier habitación en el plano para transportarte a su render 360°
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="bg-neutral-950 p-3 rounded-xl border border-white/5 text-center">
