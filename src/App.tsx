@@ -470,44 +470,23 @@ export default function App() {
         return [
           {
             id: 'va-1',
-            pitch: -48.0,
-            yaw: -5.0,
-            text: 'Cubierta y Techo: Pendientes ocultas, aislación térmica y desagües pluviales',
+            pitch: -28.0,
+            yaw: 0.0,
+            text: 'Cubierta y Techo Plano: Pendiente mínima de desagüe con pretiles y membrana (Estrictamente Planta Baja Única)',
             type: 'info'
           },
           {
             id: 'va-2',
-            pitch: -38.0,
-            yaw: 30.0,
-            text: 'Pérgola de madera y Porche de acceso principal con iluminación exterior',
+            pitch: -25.0,
+            yaw: 70.0,
+            text: 'Pérgola de madera en patio y acceso vehicular sin pisos superiores',
             type: 'info'
           },
           {
             id: 'va-3',
-            pitch: -32.0,
-            yaw: -55.0,
-            text: 'Galería lateral y patio: Conexión directa desde ventanal estar-comedor',
-            type: 'info'
-          },
-          {
-            id: 'va-4',
-            pitch: -42.0,
-            yaw: 165.0,
-            text: 'Contrafrente y patio posterior: Dormitorio y baño con retiro reglamentario',
-            type: 'info'
-          },
-          {
-            id: 'va-5',
-            pitch: -30.0,
-            yaw: 95.0,
-            text: 'Cochera vehicular y senda peatonal con canteros de lavandas',
-            type: 'info'
-          },
-          {
-            id: 'va-6',
-            pitch: 8.0,
-            yaw: -130.0,
-            text: 'Visuales 360° del entorno: Orientación solar óptima y paisaje',
+            pitch: -20.0,
+            yaw: -60.0,
+            text: 'Volumetría en L de 60 m² de un solo nivel, sin escaleras interiores ni planta alta',
             type: 'info'
           }
         ];
@@ -749,14 +728,14 @@ export default function App() {
       case 'interior-bano':
         return '/interior-bano-360.jpg';
       default:
-        return '/vista-aerea-360.jpg';
+        return '/fachada-frontal-360.jpg';
     }
   };
 
   const getSceneTitle = (scene: string) => {
     switch (scene) {
       case 'vista-aerea':
-        return 'Vista Superior 360°';
+        return 'Vista Superior Aérea 360°';
       case 'fachada-frontal':
         return '1. Frente Principal';
       case 'fachada-lateral':
@@ -783,19 +762,19 @@ export default function App() {
   const getSceneDescription = (scene: string) => {
     switch (scene) {
       case 'vista-aerea':
-        return 'Vista Superior 360° Cenital • Techo, Pérgola, Galería, Patio y Entorno Completo';
+        return 'Perspectiva Cenital 360° • Techo Plano, Pérgola y Cubierta (Planta Baja Única, sin pisos superiores)';
       case 'fachada-frontal':
-        return 'Cara Frontal (Fachada Principal) • Pérgola, Entrada y Cochera';
+        return 'Cara Frontal (Fachada Principal) • Pérgola, Entrada y Cochera (Planta Baja Única)';
       case 'fachada-lateral':
-        return 'Cara Lateral (Galería/Patio) • Ventanal Corredizo DVH y Muros';
+        return 'Cara Lateral (Galería/Patio) • Ventanal Corredizo DVH y Muros (Sin nivel superior)';
       case 'fachada-trasera':
-        return 'Cara Trasera (Contrafrente) • Dormitorio y Baño hacia Jardín';
+        return 'Cara Trasera (Contrafrente) • Dormitorio y Baño hacia Jardín Privado';
       case 'fachada-esquina':
-        return 'Cara Esquina (Patio en L) • Salida de Servicio y Cochera';
+        return 'Cara Esquina (Patio en L) • Salida de Servicio y Cochera (Un solo nivel)';
       case 'exterior-dusk':
-        return 'Vista Nocturna • Iluminación LED Cálida y Pérgola';
+        return 'Vista Nocturna • Iluminación LED Cálida y Pérgola de Madera';
       case 'interior':
-        return 'Interior Vivienda 60 m² • Estar - Comedor Integrado (3.80 × 6.60 m)';
+        return 'Interior Vivienda 60 m² • Estar - Comedor Integrado (3.80 × 6.60 m, sin escaleras)';
       case 'interior-dormitorio':
         return 'Dormitorio Principal (3.70 × 3.50 m) • Cama Matrimonial y Placard';
       case 'interior-bano':
@@ -1180,7 +1159,9 @@ export default function App() {
                 <h1 className="text-xs sm:text-sm font-bold tracking-wide uppercase text-white truncate">
                   Visor 360°
                 </h1>
-                <span className="hidden md:inline text-neutral-400 text-xs">• Vivienda 60 m²</span>
+                <span className="hidden md:inline text-emerald-400 text-xs font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  Planta Baja Única (Sin Planta Alta)
+                </span>
                 {/* Badge de librería activa */}
                 <div className="flex items-center gap-1 bg-neutral-800/90 border border-emerald-500/30 rounded-full px-2 py-0.5 shrink-0">
                   <Cpu className="w-3 h-3 text-emerald-400" />
