@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Ajustes de integración para Pannellum WebGL */
+#panorama-container {
+  touch-action: pan-x pan-y;
+  user-select: none;
+}
+
+.pnlm-container {
+  font-family: inherit !important;
+}
+
+.pnlm-load-box {
+  background: rgba(10, 10, 10, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important;
+  padding: 1.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.pnlm-load-button {
+  background: #10b981 !important;
+  border-radius: 0.75rem !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.pnlm-load-button:hover {
+  background: #059669 !important;
+  transform: scale(1.05);
+}
+
+/* Tooltip de los hotspots de Pannellum */
+.pnlm-tooltip span {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.5rem 0.85rem !important;
+  font-size: 0.75rem !important;
+  font-family: inherit !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  max-width: 260px !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+}
+
+.pnlm-hotspot-base {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pnlm-hotspot-base:hover {
+  transform: scale(1.25) !important;
+}
+
+/* Ocultar controles nativos de Pannellum cuando usamos los de la barra personalizada */
+.pnlm-compass {
+  bottom: 85px !important;
+  right: 15px !important;
+  opacity: 0.85;
+}

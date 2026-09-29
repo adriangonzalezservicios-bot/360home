@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor Panorámico 360° - Render Equirrectangular</title>
+
+  <!-- 1. CDN Oficial de Pannellum (CSS y JS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+  <!-- 2. Estilos para garantizar contenedor responsivo al 100% -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0a0a0a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #panorama {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    /* Estilo sutil para personalizar los controles si se desea */
+    .pnlm-load-button p {
+      color: #ffffff;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Contenedor del visor 360 -->
+  <div id="panorama"></div>
+
+  <!-- 3. Inicialización del visor con WebGL -->
+  <script>
+    // Inicialización del visor Pannellum
+    const viewer = pannellum.viewer('panorama', {
+      /**
+       * Tipo de proyección panorámica:
+       * 'equirectangular' es el formato estándar 2:1 generado por motores de render
+       * como V-Ray, Corona, Blender (Cycles/Eevee), 3ds Max, Lumion, Twinmotion o Unreal Engine.
+       */
+      type: 'equirectangular',
+
+      /**
+       * Ruta de la imagen panorámica:
+       * Asegúrate de que 'render-360.jpg' esté en la misma carpeta o especifica la URL absoluta.
+       */
+      panorama: 'render-360.jpg',
+
+      /**
+       * Carga automática:
+       * Inicia la descarga y renderizado de inmediato sin requerir clic previo.
+       */
+      autoLoad: true,
+
+      /**
+       * Rotación automática continua:
+       * Valor en grados por segundo. 
+       * Negativo (-2) gira suavemente hacia la derecha; positivo gira a la izquierda.
+       */
+      autoRotate: -2,
+
+      /**
+       * Configuración CORS (Cross-Origin Resource Sharing):
+       * 'anonymous' permite cargar imágenes alojadas en buckets de almacenamiento en la nube
+       * (AWS S3, Google Cloud Storage, Cloudinary, Firebase Storage, etc.) sin bloqueos WebGL.
+       */
+      crossOrigin: 'anonymous',
+
+      /**
+       * Controles visibles en pantalla:
+       */
+      showZoomCtrl: true,         // Botones de Zoom (+) y (-)
+      showFullscreenCtrl: true,   // Botón de pantalla completa
+      compass: true,              // Rosa de los vientos / brújula opcional
+      mouseZoom: true,            // Zoom con la rueda del ratón
+      doubleClickZoom: true,      // Zoom con doble clic o doble tap
+
+      /**
+       * Rango de campo visual (Field of View - FOV en grados):
+       */
+      hfov: 100,                  // Campo de visión inicial
+      minHfov: 50,                // Zoom máximo permitido (cercano)
+      maxHfov: 120,               // Zoom mínimo permitido (gran angular)
+
+      /**
+       * Puntos de Interés (Hotspots):
+       * Puedes descomentar el siguiente bloque para mostrar puntos clickeables con información.
+       */
+      hotSpots: [
+        /*
+        {
+          pitch: 1.5,             // Ángulo vertical en grados (-90 a 90)
+          yaw: -25.0,             // Ángulo horizontal en grados (-180 a 180)
+          type: "info",           // Tipo de hotspot ("info" muestra ventana emergente)
+          text: "Acceso Principal y Estar-Comedor",
+          URL: ""                 // Opcional: enlace a otra página o web
+        },
+        {
+          pitch: -5.0,
+          yaw: 85.0,
+          type: "info",
+          text: "Cocina integrada con mesada y ventilación exterior"
+        }
+        */
+      ]
+    });
+
+    // Opcional: Si deseas pausar la autorrotación al interactuar y reanudarla después
+    /*
+    viewer.on('mousedown', () => viewer.stopAutoRotate());
+    */
+  </script>
+</body>
+</html>

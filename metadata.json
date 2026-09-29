@@ -1,0 +1,6 @@
+{
+  "name": "Visor Panorámico 360° Equirrectangular",
+  "description": "Visor interactivo profesional WebGL para renders arquitectónicos panorámicos 360° con autorrotación, hotspots interactivos y controles inmersivos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

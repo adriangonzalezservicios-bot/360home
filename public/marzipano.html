@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor Panorámico 360° - Marzipano WebGL</title>
+
+  <!-- 1. CDN Oficial de Marzipano -->
+  <script src="https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js"></script>
+
+  <!-- 2. Estilos para garantizar visor 100% responsivo y controles visibles -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* Contenedor del panorama: 100% de alto y ancho responsivo */
+    #pano {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      cursor: grab;
+    }
+
+    #pano:active {
+      cursor: grabbing;
+    }
+
+    /* Barra de Controles Flotante (Zoom, Rotación, Pantalla Completa) */
+    .controls-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(18, 18, 18, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 8px 14px;
+      border-radius: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+    }
+
+    .ctrl-btn {
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.08);
+    }
+
+    .ctrl-btn:active {
+      transform: scale(0.95);
+    }
+
+    .ctrl-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Estilos para Hotspots (Puntos de Interés con Cuadro de Texto) */
+    .hotspot {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .hotspot-pin {
+      width: 32px;
+      height: 32px;
+      background: #10b981;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      animation: pulse 2s infinite ease-in-out;
+      transition: transform 0.25s ease;
+    }
+
+    .hotspot:hover .hotspot-pin {
+      transform: scale(1.2);
+      background: #059669;
+    }
+
+    .hotspot-tooltip {
+      position: absolute;
+      bottom: 42px;
+      left: 50%;
+      transform: translateX(-50%) translateY(5px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+    }
+
+    .hotspot-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px;
+      border-style: solid;
+      border-color: rgba(15, 23, 42, 0.95) transparent transparent transparent;
+    }
+
+    .hotspot:hover .hotspot-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Contenedor 100% responsivo para WebGL -->
+  <div id="pano"></div>
+
+  <!-- Barra de Controles Visibles en Pantalla (Zoom In, Zoom Out, Rotación y Pantalla Completa) -->
+  <div class="controls-bar">
+    <!-- Botón Acercar Zoom -->
+    <button id="zoomInBtn" class="ctrl-btn" title="Acercar (+)">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+    </button>
+
+    <!-- Botón Alejar Zoom -->
+    <button id="zoomOutBtn" class="ctrl-btn" title="Alejar (-)">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+    </button>
+
+    <!-- Botón Pausar / Iniciar Rotación Automática -->
+    <button id="autorotateBtn" class="ctrl-btn" title="Alternar Rotación Automática">
+      <svg id="rotateIcon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+    </button>
+
+    <!-- Botón Pantalla Completa -->
+    <button id="fullscreenBtn" class="ctrl-btn" title="Pantalla Completa">
+      <svg id="fsIcon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+    </button>
+  </div>
+
+  <!-- 3. Inicialización del visor con Marzipano -->
+  <script>
+    // 1. Inicializar el visor de Marzipano en el elemento #pano
+    var panoElement = document.getElementById('pano');
+    var viewerOpts = {
+      controls: {
+        mouseViewMode: 'drag' // Permite arrastrar el panorama de manera táctil y con ratón
+      }
+    };
+    var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
+
+    // 2. Fuente de la imagen con soporte CORS
+    // { crossOrigin: 'anonymous' } evita bloqueos de seguridad WebGL si la imagen proviene de S3 o Google Cloud Storage
+    var source = Marzipano.ImageUrlSource.fromString(
+      'render-360.jpg',
+      { crossOrigin: 'anonymous' }
+    );
+
+    // 3. Geometría equirrectangular (360° x 180°)
+    var geometry = new Marzipano.EquirectGeometry([{ width: 4000 }]);
+
+    // 4. Vista Rectilínea con limitadores de FOV (Campo de visión)
+    // Permite zoom entre 50° y 110° con FOV inicial de 90°
+    var limiter = Marzipano.RectilinearView.limit.traditional(
+      4000,
+      100 * Math.PI / 180, // Límite máximo FOV
+      120 * Math.PI / 180  // Límite Pitch
+    );
+
+    var view = new Marzipano.RectilinearView(
+      { yaw: 0, pitch: 0, fov: 90 * Math.PI / 180 },
+      limiter
+    );
+
+    // 5. Creación de la escena
+    var scene = viewer.createScene({
+      source: source,
+      geometry: geometry,
+      view: view,
+      pinFirstLevel: true
+    });
+
+    // 6. Activar la escena inmediatamente
+    scene.switchTo();
+
+    // 7. Configuración de Rotación Automática Suave
+    // yawSpeed: 0.03 radianes/segundo (giro horizontal suave y cinematográfico)
+    var autorotate = Marzipano.autorotate({
+      yawSpeed: 0.03,
+      targetPitch: 0,
+      targetFov: 90 * Math.PI / 180
+    });
+
+    var isAutorotating = true;
+    viewer.startMovement(autorotate);
+    // Reanudar automáticamente la rotación tras 3.5 segundos de inactividad del usuario
+    viewer.setIdleMovement(3500, autorotate);
+
+    // -------------------------------------------------------------
+    // 8. EJEMPLO DE PUNTO DE INTERÉS (HOTSPOT) CON CUADRO DE TEXTO:
+    // Puedes descomentar este bloque para colocar marcadores interactivos
+    // -------------------------------------------------------------
+    /*
+    var hotspotElement = document.createElement('div');
+    hotspotElement.className = 'hotspot';
+    hotspotElement.innerHTML = 
+      '<div class="hotspot-pin">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4" fill="currentColor"></circle></svg>' +
+      '</div>' +
+      '<div class="hotspot-tooltip">' +
+        '<strong>Estar - Comedor</strong><br>Ambiente principal de 3.80m x 6.60m' +
+      '</div>';
+
+    // Se posiciona en coordenadas esféricas (en radianes):
+    // yaw: ángulo horizontal (grados * Math.PI / 180)
+    // pitch: ángulo vertical (grados * Math.PI / 180)
+    scene.hotspotContainer().createHotspot(hotspotElement, {
+      yaw: 25 * Math.PI / 180,
+      pitch: -3 * Math.PI / 180
+    });
+    */
+
+    // -------------------------------------------------------------
+    // 9. Lógica de los Controles de Zoom, Rotación y Pantalla Completa
+    // -------------------------------------------------------------
+
+    // Control de Zoom (+ y -)
+    var zoomStep = 10 * Math.PI / 180; // 10 grados en radianes
+
+    document.getElementById('zoomInBtn').addEventListener('click', function() {
+      var currentFov = view.fov();
+      view.setFov(Math.max(45 * Math.PI / 180, currentFov - zoomStep));
+    });
+
+    document.getElementById('zoomOutBtn').addEventListener('click', function() {
+      var currentFov = view.fov();
+      view.setFov(Math.min(115 * Math.PI / 180, currentFov + zoomStep));
+    });
+
+    // Control de Rotación Automática (Play / Pause)
+    var autorotateBtn = document.getElementById('autorotateBtn');
+    autorotateBtn.addEventListener('click', function() {
+      if (isAutorotating) {
+        viewer.stopMovement();
+        viewer.setIdleMovement(Infinity, null);
+        isAutorotating = false;
+        autorotateBtn.style.opacity = '0.5';
+      } else {
+        viewer.startMovement(autorotate);
+        viewer.setIdleMovement(3500, autorotate);
+        isAutorotating = true;
+        autorotateBtn.style.opacity = '1';
+      }
+    });
+
+    // Control de Pantalla Completa
+    var fullscreenBtn = document.getElementById('fullscreenBtn');
+    fullscreenBtn.addEventListener('click', function() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function(err) {
+          console.warn('Error al activar pantalla completa:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
