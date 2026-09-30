@@ -1,6 +1,6 @@
 {
-  "name": "Visor Panorámico 360° Equirrectangular",
-  "description": "Visor interactivo profesional WebGL para renders arquitectónicos panorámicos 360° con autorrotación, hotspots interactivos y controles inmersivos.",
+  "name": "MHC | Viviendas Steel Frame en Monte Hermoso",
+  "description": "Diseño y construcción de viviendas contemporáneas en Steel Frame en Monte Hermoso. Modelos de vivienda, cotizador online en tiempo real y recorridos virtuales 360°.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
