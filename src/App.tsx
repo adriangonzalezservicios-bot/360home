@@ -28,7 +28,13 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Navigation
+  Navigation,
+  Smartphone,
+  Image as ImageIcon,
+  Globe,
+  ShieldCheck,
+  Menu,
+  Grid
 } from 'lucide-react';
 
 // Declaraciones globales para los CDN inyectados
@@ -427,6 +433,23 @@ export default function App() {
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
   const [customImageName, setCustomImageName] = useState<string>('render-360.jpg');
 
+  // Modo de visualización: '360' (Visor WebGL Esférico) o 'flat' (Fotografía Plana HD sin distorsión ovalada)
+  const [displayMode, setDisplayMode] = useState<'360' | 'flat'>('360');
+
+  // Calibración Antidistorsión en 360 (Fija el campo visual a 65° para paredes 100% rectas)
+  const [isAntiDistortionActive, setIsAntiDistortionActive] = useState(false);
+
+  // Menú móvil desplegable para herramientas secundarias en celulares
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Soporte de Giroscopio para celulares
+  const [gyroActive, setGyroActive] = useState(false);
+  const [hasGyro, setHasGyro] = useState(false);
+
+  // Zoom interactivo para la vista plana
+  const [flatZoom, setFlatZoom] = useState<number>(1);
+  const touchStartXRef = useRef<number | null>(null);
+
   // Floating Minimap state
   const [showMinimap, setShowMinimap] = useState(true);
   const [isMinimapExpanded, setIsMinimapExpanded] = useState(false);
@@ -786,6 +809,105 @@ export default function App() {
     }
   };
 
+  // Obtener ruta de la imagen en perspectiva plana (sin curvatura esférica/ovalada)
+  const getFlatImageSource = (scene: string) => {
+    if (scene === 'custom' && customImageUrl) {
+      return customImageUrl;
+    }
+    switch (scene) {
+      case 'fachada-frontal':
+        return '/foto-frente-plana.jpg';
+      case 'interior':
+        return '/foto-interior-plana.jpg';
+      case 'fachada-lateral':
+        return '/foto-lateral-plana.jpg';
+      case 'exterior-dusk':
+        return '/foto-dusk-plana.jpg';
+      case 'vista-aerea':
+        return '/corte-isometrico-3d.jpg';
+      case 'fachada-trasera':
+        return '/foto-lateral-plana.jpg';
+      case 'fachada-esquina':
+        return '/foto-lateral-plana.jpg';
+      case 'interior-dormitorio':
+        return '/foto-interior-plana.jpg';
+      case 'interior-bano':
+        return '/foto-interior-plana.jpg';
+      default:
+        return '/foto-frente-plana.jpg';
+    }
+  };
+
+  const ALL_SCENES = [
+    { id: 'fachada-frontal', name: '1. Frente Principal', category: 'Exterior', icon: '🏠' },
+    { id: 'fachada-lateral', name: '2. Lateral Galería', category: 'Exterior', icon: '🌿' },
+    { id: 'fachada-trasera', name: '3. Trasera Jardín', category: 'Exterior', icon: '🌳' },
+    { id: 'fachada-esquina', name: '4. Esquina en L', category: 'Exterior', icon: '📐' },
+    { id: 'exterior-dusk', name: 'Atardecer / Noche', category: 'Exterior', icon: '🌙' },
+    { id: 'interior', name: 'Estar - Comedor', category: 'Interior', icon: '🛋️' },
+    { id: 'interior-dormitorio', name: 'Dormitorio Principal', category: 'Interior', icon: '🛏️' },
+    { id: 'interior-bano', name: 'Baño Completo', category: 'Interior', icon: '🚿' },
+    { id: 'vista-aerea', name: 'Vista Superior (Corte 3D)', category: 'Cenital', icon: '🚁' }
+  ];
+
+  const goToNextScene = () => {
+    const currentIndex = ALL_SCENES.findIndex((s) => s.id === currentScene);
+    const nextIndex = (currentIndex + 1) % ALL_SCENES.length;
+    handleSceneChange(ALL_SCENES[nextIndex].id);
+  };
+
+  const goToPrevScene = () => {
+    const currentIndex = ALL_SCENES.findIndex((s) => s.id === currentScene);
+    const prevIndex = (currentIndex - 1 + ALL_SCENES.length) % ALL_SCENES.length;
+    handleSceneChange(ALL_SCENES[prevIndex].id);
+  };
+
+  // Detección de giroscopio en celular
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+      setHasGyro(true);
+    }
+  }, []);
+
+  const toggleGyro = () => {
+    if (typeof (DeviceOrientationEvent as any)?.requestPermission === 'function') {
+      (DeviceOrientationEvent as any)
+        .requestPermission()
+        .then((permission: string) => {
+          if (permission === 'granted') {
+            setGyroActive((prev) => !prev);
+          }
+        })
+        .catch(console.error);
+    } else {
+      setGyroActive((prev) => !prev);
+    }
+  };
+
+  // Ajustar campo visual (FOV) en tiempo real
+  const applyHfov = (newFov: number) => {
+    setHfov(newFov);
+    if (engine === 'marzipano' && sceneInstanceRef.current) {
+      const view = sceneInstanceRef.current.view();
+      if (view) {
+        view.setFov((newFov * Math.PI) / 180);
+      }
+    } else if (engine === 'pannellum' && viewerInstanceRef.current && viewerInstanceRef.current.setHfov) {
+      viewerInstanceRef.current.setHfov(newFov);
+    }
+  };
+
+  // Alternar Corrección Antidistorsión (Vista Recta a 65° sin efecto ovalado)
+  const toggleAntiDistortion = () => {
+    if (!isAntiDistortionActive) {
+      setIsAntiDistortionActive(true);
+      applyHfov(65);
+    } else {
+      setIsAntiDistortionActive(false);
+      applyHfov(90);
+    }
+  };
+
   // Inicializar visor WebGL según el motor seleccionado
   useEffect(() => {
     let checkInterval: any;
@@ -1132,11 +1254,140 @@ export default function App() {
       <div
         id="pano-container"
         ref={panoramaRef}
-        className="w-full h-full absolute inset-0 z-0 cursor-grab active:cursor-grabbing"
+        className={`w-full h-full absolute inset-0 z-0 cursor-grab active:cursor-grabbing ${
+          displayMode === 'flat' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
       />
 
-      {/* Indicador de carga inicial */}
-      {!isLoaded && (
+      {/* VISTA PLANA HD (FOTOGRAFÍA ARQUITECTÓNICA RECTILÍNEA SIN DISTORSIÓN OVALADA) */}
+      {displayMode === 'flat' && (
+        <div
+          className="absolute inset-0 z-10 bg-neutral-950 flex flex-col justify-between overflow-hidden"
+          onTouchStart={(e) => {
+            touchStartXRef.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartXRef.current !== null) {
+              const diffX = e.changedTouches[0].clientX - touchStartXRef.current;
+              if (diffX > 50) {
+                goToPrevScene();
+              } else if (diffX < -50) {
+                goToNextScene();
+              }
+              touchStartXRef.current = null;
+            }
+          }}
+        >
+          {/* Área de Visualización Central de la Fotografía */}
+          <div className="relative flex-1 flex items-center justify-center pt-20 pb-20 sm:pb-24 px-3 sm:px-6 overflow-hidden">
+            <div className="relative max-w-6xl max-h-full flex items-center justify-center">
+              <img
+                src={getFlatImageSource(currentScene)}
+                alt={getSceneTitle(currentScene)}
+                style={{ transform: `scale(${flatZoom})` }}
+                className="w-auto h-auto max-h-[64vh] sm:max-h-[72vh] object-contain rounded-2xl shadow-2xl border border-white/10 transition-transform duration-200 select-none pointer-events-auto"
+              />
+
+              {/* Badge superior sobre la imagen */}
+              <div className="absolute top-3 left-3 bg-neutral-950/85 backdrop-blur-md border border-cyan-500/40 text-cyan-300 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xl flex items-center gap-1.5 pointer-events-none">
+                <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                <span className="hidden xs:inline">Perspectiva Rectilínea • Sin Distorsión Ovalada (0% Ojo de Pez)</span>
+                <span className="xs:hidden">Perspectiva Recta Sin Óvalo</span>
+              </div>
+
+              {/* Botón flotante para cambiar a 360° */}
+              <div className="absolute top-3 right-3 flex items-center gap-2">
+                <button
+                  onClick={() => setDisplayMode('360')}
+                  className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xl flex items-center gap-1.5 backdrop-blur-md transition-all border border-emerald-400/40 active:scale-95"
+                  title="Cambiar al visor inmersivo 360°"
+                >
+                  <Globe className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Ver en 360° 🌐</span>
+                </button>
+              </div>
+
+              {/* Flechas de navegación previa y siguiente */}
+              <button
+                onClick={goToPrevScene}
+                className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-neutral-900/85 hover:bg-neutral-800 border border-white/20 text-white flex items-center justify-center shadow-2xl backdrop-blur-md transition-all active:scale-95"
+                title="Habitación o fachada anterior"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+              <button
+                onClick={goToNextScene}
+                className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-neutral-900/85 hover:bg-neutral-800 border border-white/20 text-white flex items-center justify-center shadow-2xl backdrop-blur-md transition-all active:scale-95"
+                title="Siguiente habitación o fachada"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+
+              {/* Controles de Zoom para la fotografía */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-neutral-900/85 backdrop-blur-md border border-white/10 p-1 rounded-xl shadow-lg">
+                <button
+                  onClick={() => setFlatZoom((prev) => Math.max(1, prev - 0.25))}
+                  className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800"
+                  title="Reducir zoom"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-mono text-neutral-300 px-1 font-semibold">
+                  {Math.round(flatZoom * 100)}%
+                </span>
+                <button
+                  onClick={() => setFlatZoom((prev) => Math.min(2.5, prev + 0.25))}
+                  className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800"
+                  title="Aumentar zoom"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setFlatZoom(1)}
+                  className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800"
+                  title="Reiniciar zoom"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Barra inferior de la Vista Plana (Diseñada para celulares y desktop) */}
+          <div className="p-2.5 sm:p-3 bg-neutral-900/95 backdrop-blur-xl border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 pb-safe z-20">
+            <div className="text-center sm:text-left flex items-center gap-2">
+              <span className="text-xs font-bold text-white">{getSceneTitle(currentScene)}</span>
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                Planta Baja Única
+              </span>
+              <span className="text-[10px] text-neutral-400 hidden sm:inline">
+                • Desliza o usa las flechas para explorar
+              </span>
+            </div>
+
+            {/* Selector rápido de escenas tipo carrusel horizontal */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full py-0.5">
+              {ALL_SCENES.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => handleSceneChange(scene.id)}
+                  className={`px-2.5 py-1 rounded-xl text-xs whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 ${
+                    currentScene === scene.id
+                      ? 'bg-cyan-600 text-white font-bold shadow-md ring-1 ring-cyan-300'
+                      : 'bg-neutral-800/90 text-neutral-300 hover:text-white hover:bg-neutral-700'
+                  }`}
+                >
+                  <span>{scene.icon}</span>
+                  <span>{scene.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Indicador de carga inicial en 360 */}
+      {displayMode === '360' && !isLoaded && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-neutral-950/80 backdrop-blur-md pointer-events-none transition-opacity">
           <div className="w-12 h-12 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-sm font-medium tracking-wider text-neutral-300 uppercase">
@@ -1148,40 +1399,70 @@ export default function App() {
         </div>
       )}
 
-      {/* 1. BARRA SUPERIOR (HEADER PRINCIPAL RESPONSIVO) */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3 pointer-events-none">
-        <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-2">
+      {/* 1. BARRA SUPERIOR (HEADER PRINCIPAL RESPONSIVO CON SELECTOR DE MODO) */}
+      <header className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3 pointer-events-none pt-safe">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Título & Identificador de Escena */}
-          <div className="pointer-events-auto flex items-center gap-2.5 bg-neutral-900/90 backdrop-blur-xl border border-white/10 px-3 sm:px-4 py-2 rounded-2xl shadow-2xl">
+          <div className="pointer-events-auto flex items-center gap-2 bg-neutral-900/90 backdrop-blur-xl border border-white/10 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-2xl">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <h1 className="text-xs sm:text-sm font-bold tracking-wide uppercase text-white truncate">
-                  Visor 360°
+                  Visor 360° / Foto
                 </h1>
-                <span className="hidden md:inline text-emerald-400 text-xs font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                  Planta Baja Única (Sin Planta Alta)
+                <span className="hidden lg:inline text-emerald-400 text-xs font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  Planta Baja Única
                 </span>
-                {/* Badge de librería activa */}
-                <div className="flex items-center gap-1 bg-neutral-800/90 border border-emerald-500/30 rounded-full px-2 py-0.5 shrink-0">
-                  <Cpu className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] font-mono text-emerald-400 uppercase font-semibold">
-                    {engine === 'marzipano' ? 'Marzipano' : 'Pannellum'}
-                  </span>
-                </div>
+                {/* Badge de librería activa (en modo 360) */}
+                {displayMode === '360' && (
+                  <div className="hidden sm:flex items-center gap-1 bg-neutral-800/90 border border-emerald-500/30 rounded-full px-2 py-0.5 shrink-0">
+                    <Cpu className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] font-mono text-emerald-400 uppercase font-semibold">
+                      {engine === 'marzipano' ? 'Marzipano' : 'Pannellum'}
+                    </span>
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-neutral-400 hidden lg:block truncate max-w-md">
+              <p className="text-[11px] text-neutral-400 hidden xl:block truncate max-w-md">
                 {getSceneDescription(currentScene)}
               </p>
             </div>
           </div>
 
+          {/* SELECTOR PRINCIPAL DE MODO: 🌐 360° VS 🖼️ VISTA PLANA (SIN ÓVALO) */}
+          <div className="pointer-events-auto flex items-center bg-neutral-900/95 backdrop-blur-xl border border-white/20 p-1 rounded-2xl shadow-2xl">
+            <button
+              onClick={() => setDisplayMode('360')}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                displayMode === '360'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-400/40'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Visor 360° Inmersivo con arrastre táctil y rotación WebGL"
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-300" />
+              <span className="whitespace-nowrap">Visión 360°</span>
+            </button>
+            <button
+              onClick={() => setDisplayMode('flat')}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                displayMode === 'flat'
+                  ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-950/60 ring-1 ring-cyan-400/40'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Vista Fotográfica HD: Renders y fotos rectilíneas sin distorsión esférica ni efecto ovalado"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-cyan-300" />
+              <span className="whitespace-nowrap">Vista Plana <span className="hidden sm:inline font-normal text-cyan-100">(Sin Óvalo)</span></span>
+            </button>
+          </div>
+
           {/* Acciones principales de la cabecera */}
-          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+          <div className="pointer-events-auto flex items-center gap-1 sm:gap-2">
             {/* Botón Destacado: VISTA SUPERIOR 360° */}
             <button
               onClick={() => handleSceneChange('vista-aerea')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all border ${
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all border ${
                 currentScene === 'vista-aerea'
                   ? 'bg-amber-500 text-neutral-950 border-amber-300 ring-2 ring-amber-400/40 font-bold'
                   : 'bg-neutral-900/85 hover:bg-neutral-800 text-amber-300 hover:text-white border-amber-500/30 hover:border-amber-400'
@@ -1238,7 +1519,7 @@ export default function App() {
                 setPlanViewMode('3d-cutaway');
                 setShowPlanModal(true);
               }}
-              className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-amber-300 hover:text-white border border-amber-500/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
+              className="hidden sm:flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-amber-300 hover:text-white border border-amber-500/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
               title="Ver Corte Isométrico 3D (Render Arquitectónico en L)"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -1252,7 +1533,7 @@ export default function App() {
                 setShowMinimap(true);
                 setShowPlanModal(true);
               }}
-              className="flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
+              className="hidden sm:flex items-center gap-1.5 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-medium shadow-xl backdrop-blur-md transition-all"
               title="Ver Plano Arquitectónico 2D (60 m²)"
             >
               <Layers className="w-3.5 h-3.5 text-emerald-400" />
@@ -1265,7 +1546,7 @@ export default function App() {
                 setCodeTab(engine);
                 setShowCodeModal(true);
               }}
-              className="flex items-center gap-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
+              className="hidden md:flex items-center gap-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/30 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold shadow-xl backdrop-blur-md transition-all"
               title="Ver y descargar código index.html autónomo"
             >
               <Code2 className="w-3.5 h-3.5" />
@@ -1275,7 +1556,7 @@ export default function App() {
             {/* Botón Subir propio */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
+              className="hidden md:flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
               title="Subir render 360 propio"
             >
               <Upload className="w-3.5 h-3.5 text-cyan-400" />
@@ -1284,7 +1565,7 @@ export default function App() {
             {/* Botón Guía Live Server */}
             <button
               onClick={() => setShowGuideModal(true)}
-              className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
+              className="hidden md:flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-neutral-900/85 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-white/10 rounded-xl shadow-xl backdrop-blur-md transition-all"
               title="Guía: Cómo correr con Live Server y evitar CORS"
             >
               <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
@@ -1297,6 +1578,15 @@ export default function App() {
               title="Alternar Pantalla Completa"
             >
               {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* BOTÓN MENÚ MÓVIL (Exclusivo celular) */}
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="flex sm:hidden items-center justify-center w-8 h-8 bg-neutral-900/90 hover:bg-neutral-800 text-neutral-200 border border-white/15 rounded-xl shadow-xl"
+              title="Menú y herramientas secundarias"
+            >
+              <Menu className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1905,14 +2195,14 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. BARRA DE CONTROLES INFERIOR FLOTANTE (HUD) */}
-      <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-[94%] max-w-xl">
-        <div className="pointer-events-auto bg-neutral-900/90 backdrop-blur-xl border border-white/10 px-4 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-3">
-          {/* Rotación automática */}
-          <div className="flex items-center gap-2">
+      {/* 3. BARRA DE CONTROLES INFERIOR FLOTANTE (HUD) - OPTIMIZADA PARA MÓVIL Y DESKTOP */}
+      {displayMode === '360' && (
+        <footer className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-[96%] max-w-2xl pb-safe">
+          <div className="pointer-events-auto bg-neutral-900/95 backdrop-blur-xl border border-white/15 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl flex items-center justify-between gap-1 sm:gap-2">
+            {/* 1. Rotación automática */}
             <button
               onClick={toggleAutoRotate}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 isRotating
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
                   : 'bg-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-700'
@@ -1920,68 +2210,246 @@ export default function App() {
               title={isRotating ? 'Pausar rotación automática' : 'Iniciar rotación suave'}
             >
               {isRotating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isRotating ? 'Rotación ON' : 'Rotación OFF'}</span>
+              <span className="hidden sm:inline">{isRotating ? 'Rotación ON' : 'Rotación OFF'}</span>
             </button>
-          </div>
 
-          {/* Controles de Zoom y Reset */}
-          <div className="flex items-center gap-1.5">
+            {/* 2. Botón ANTI-DISTORSIÓN (VISTA RECTA 65° / SIN ÓVALO) */}
             <button
-              onClick={() => handleZoom('out')}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
-              title="Alejar Zoom (-)"
+              onClick={toggleAntiDistortion}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all shrink-0 border ${
+                isAntiDistortionActive
+                  ? 'bg-amber-500 text-neutral-950 border-amber-300 font-bold shadow-lg ring-1 ring-amber-400'
+                  : 'bg-neutral-800/90 text-amber-300 border-amber-500/30 hover:bg-neutral-700 hover:text-white'
+              }`}
+              title={
+                isAntiDistortionActive
+                  ? 'Desactivar corrección (Volver a Gran Angular 90°)'
+                  : 'Activar Vista Recta Natural 65°: Elimina toda curvatura u óvalo, dejando paredes 100% verticales'
+              }
             >
-              <ZoomOut className="w-4 h-4" />
+              <ShieldCheck className={`w-3.5 h-3.5 ${isAntiDistortionActive ? 'text-neutral-950' : 'text-amber-400'}`} />
+              <span className="hidden sm:inline">
+                {isAntiDistortionActive ? 'Vista Recta (Sin Óvalo)' : 'Anti-Óvalo'}
+              </span>
+              <span className="sm:hidden text-[11px]">
+                {isAntiDistortionActive ? 'Recta ✓' : 'Anti-Óvalo'}
+              </span>
             </button>
-            <div className="text-xs font-mono text-neutral-400 px-1.5">
-              {hfov}°
+
+            {/* 3. Controles de Zoom y Reset */}
+            <div className="flex items-center gap-1 bg-neutral-950/50 p-0.5 rounded-xl border border-white/5">
+              <button
+                onClick={() => handleZoom('out')}
+                className="p-1.5 sm:p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
+                title="Alejar Zoom (-)"
+              >
+                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+              <div className="text-[11px] sm:text-xs font-mono text-neutral-300 px-1 font-semibold">
+                {hfov}°
+              </div>
+              <button
+                onClick={() => handleZoom('in')}
+                className="p-1.5 sm:p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
+                title="Acercar Zoom (+)"
+              >
+                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+              <button
+                onClick={handleResetView}
+                className="p-1.5 sm:p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
+                title="Restablecer Vista"
+              >
+                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
             </div>
-            <button
-              onClick={() => handleZoom('in')}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
-              title="Acercar Zoom (+)"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleResetView}
-              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all"
-              title="Restablecer Vista"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
 
-          {/* Toggle Hotspots y Minimap */}
-          <div className="flex items-center gap-2">
+            {/* 4. Giroscopio (Movimiento en Celular) */}
+            {hasGyro && (
+              <button
+                onClick={toggleGyro}
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${
+                  gyroActive
+                    ? 'bg-cyan-600 text-white shadow-md ring-1 ring-cyan-400'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-white'
+                }`}
+                title="Giroscopio: Controlar visor moviendo el celular físico"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">{gyroActive ? 'Giroscopio ON' : 'Giro'}</span>
+              </button>
+            )}
+
+            {/* 5. Toggle Plano Interactivo (Minimap) */}
             <button
               onClick={() => setShowMinimap(!showMinimap)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${
                 showMinimap
-                  ? 'bg-emerald-600/80 text-white shadow-md'
+                  ? 'bg-emerald-600/90 text-white shadow-md'
                   : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
               }`}
               title="Mostrar u ocultar el plano interactivo en pantalla"
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>{showMinimap ? 'Plano ON' : 'Plano OFF'}</span>
+              <span className="hidden sm:inline">{showMinimap ? 'Plano ON' : 'Plano'}</span>
             </button>
 
+            {/* 6. Pantalla Completa Móvil */}
             <button
-              onClick={() => setHotspotsEnabled(!hotspotsEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                hotspotsEnabled
-                  ? 'bg-cyan-600/80 text-white'
-                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
-              }`}
-              title="Activar u ocultar puntos de interés (hotspots)"
+              onClick={toggleFullscreen}
+              className="flex items-center justify-center p-1.5 sm:p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl transition-all shrink-0"
+              title="Alternar Pantalla Completa"
             >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Hotspots ({hotspots.length})</span>
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
           </div>
+        </footer>
+      )}
+
+      {/* MENÚ DESPLEGABLE MÓVIL (BOTTOM SHEET PARA CELULARES) */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/85 backdrop-blur-sm sm:hidden animate-in fade-in duration-200">
+          <div className="bg-neutral-900 border-t border-white/20 rounded-t-3xl p-4 shadow-2xl flex flex-col gap-3.5 pb-safe animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Opciones y Herramientas
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-1 rounded-full text-neutral-400 hover:text-white bg-neutral-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Selector de Modo en Móvil */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                Modo de Visualización:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setDisplayMode('360');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`p-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
+                    displayMode === '360'
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg ring-1 ring-emerald-300'
+                      : 'bg-neutral-800 text-neutral-300 border-white/5'
+                  }`}
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>Visión 360°</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setDisplayMode('flat');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`p-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
+                    displayMode === 'flat'
+                      ? 'bg-cyan-600 text-white border-cyan-400 shadow-lg ring-1 ring-cyan-300'
+                      : 'bg-neutral-800 text-neutral-300 border-white/5'
+                  }`}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Vista Plana (Sin Óvalo)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Accesos a Plano y Corte 3D */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  setPlanViewMode('3d-cutaway');
+                  setShowPlanModal(true);
+                  setShowMobileMenu(false);
+                }}
+                className="p-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 bg-neutral-800/90 text-amber-300 border border-amber-500/30"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Corte 3D Isométrico</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPlanViewMode('2d');
+                  setShowPlanModal(true);
+                  setShowMobileMenu(false);
+                }}
+                className="p-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 bg-neutral-800/90 text-neutral-200 border border-white/10"
+              >
+                <Layers className="w-4 h-4 text-emerald-400" />
+                <span>Plano CAD 2D (60 m²)</span>
+              </button>
+            </div>
+
+            {/* Motor WebGL */}
+            <div className="flex items-center justify-between bg-neutral-950 p-2.5 rounded-xl border border-white/10">
+              <span className="text-xs text-neutral-300">Motor WebGL:</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setEngine('marzipano')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    engine === 'marzipano' ? 'bg-emerald-600 text-white' : 'text-neutral-400 bg-neutral-800'
+                  }`}
+                >
+                  Marzipano
+                </button>
+                <button
+                  onClick={() => setEngine('pannellum')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    engine === 'pannellum' ? 'bg-emerald-600 text-white' : 'text-neutral-400 bg-neutral-800'
+                  }`}
+                >
+                  Pannellum
+                </button>
+              </div>
+            </div>
+
+            {/* Acciones de exportación y guía */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => {
+                  setShowCodeModal(true);
+                  setShowMobileMenu(false);
+                }}
+                className="p-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+              >
+                <Code2 className="w-4 h-4" />
+                <span>Código HTML</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  setShowMobileMenu(false);
+                }}
+                className="p-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 bg-neutral-800 text-cyan-300 border border-white/10"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Subir Render</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowGuideModal(true);
+                  setShowMobileMenu(false);
+                }}
+                className="p-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 bg-neutral-800 text-neutral-300 border border-white/10"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>Guía Server</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </footer>
+      )}
 
       {/* 4. MODAL: CÓDIGO INDEX.HTML AUTÓNOMO */}
       {showCodeModal && (

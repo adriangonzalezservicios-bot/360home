@@ -69,3 +69,18 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Soporte para áreas seguras en celulares (iPhone notch, barra de gestos) */
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+}
+.pt-safe {
+  padding-top: max(8px, env(safe-area-inset-top, 8px));
+}
+
+/* Evitar scroll no deseado en mobile al interactuar con el visor 360 */
+#pano-container {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
