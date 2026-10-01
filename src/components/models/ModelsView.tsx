@@ -11,9 +11,14 @@ import {
   Layers,
   ChevronRight,
   Eye,
-  FileText
+  FileText,
+  Printer,
+  ShieldCheck
 } from 'lucide-react';
 import { ArchitecturalFloorPlan } from '../ArchitecturalFloorPlan';
+import { WallSectionInteractive } from '../technical/WallSectionInteractive';
+import { LotCompatibilityMatrix } from './LotCompatibilityMatrix';
+import { DossierModal } from '../dossier/DossierModal';
 
 interface ModelsViewProps {
   selectedModelId: string;
@@ -31,6 +36,8 @@ export function ModelsView({
   const [activeTabModelId, setActiveTabModelId] = useState<string>(selectedModelId || 'modelo-01');
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number>(0);
   const [showPlanCadModal, setShowPlanCadModal] = useState<boolean>(false);
+  const [showWallSectionModal, setShowWallSectionModal] = useState<boolean>(false);
+  const [showDossierModal, setShowDossierModal] = useState<boolean>(false);
   const [planMode, setPlanMode] = useState<'corte-3d' | 'cad-2d'>('corte-3d');
 
   const activeModel =
@@ -228,6 +235,25 @@ export function ModelsView({
                 </button>
               </div>
 
+              {/* BOTONES TÉCNICOS: CORTE MURO Y DOSSIER PDF */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                <button
+                  onClick={() => setShowWallSectionModal(true)}
+                  className="w-full py-2 bg-neutral-950 hover:bg-white/5 text-[#E7E1D8] text-[11px] font-mono border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Layers className="w-3.5 h-3.5 text-[#E7E1D8]" />
+                  <span>Corte Muro 1:10</span>
+                </button>
+
+                <button
+                  onClick={() => setShowDossierModal(true)}
+                  className="w-full py-2 bg-neutral-950 hover:bg-white/5 text-white text-[11px] font-mono border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#E7E1D8]" />
+                  <span>Dossier PDF</span>
+                </button>
+              </div>
+
               <div className="text-[10px] text-neutral-400 text-center leading-normal">
                 Cotización estimativa hasta validación técnica de lote por parte de MHC.
               </div>
@@ -290,9 +316,14 @@ export function ModelsView({
             ))}
           </div>
         </div>
+
+        {/* 4. MATRIZ DE COMPATIBILIDAD CON EL LOTE EN MONTE HERMOSO */}
+        <div className="border-t border-white/10 pt-12">
+          <LotCompatibilityMatrix />
+        </div>
       </div>
 
-      {/* 4. MODAL PLANO CAD & CORTE ISOMÉTRICO */}
+      {/* 5. MODAL PLANO CAD & CORTE ISOMÉTRICO */}
       {showPlanCadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85 backdrop-blur-md">
           <div className="bg-neutral-900 border border-white/15 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -352,6 +383,40 @@ export function ModelsView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 6. MODAL CORTE CONSTRUCTIVO DEL MURO (WALL SECTION) */}
+      {showWallSectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-900 border border-white/15 w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="flex items-center justify-between p-4 bg-neutral-950 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#E7E1D8]" />
+                <h3 className="text-sm md:text-base font-semibold text-white">
+                  Ingeniería de la Envolvente — Detalle Constructivo 1:10
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWallSectionModal(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              <WallSectionInteractive />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. MODAL DOSSIER EJECUTIVO IMPRIMIBLE EN PDF */}
+      {showDossierModal && (
+        <DossierModal
+          model={activeModel}
+          onClose={() => setShowDossierModal(false)}
+        />
       )}
     </div>
   );

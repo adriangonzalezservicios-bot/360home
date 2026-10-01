@@ -13,6 +13,7 @@ import {
   Layers,
   Award
 } from 'lucide-react';
+import { WallSectionInteractive } from '../technical/WallSectionInteractive';
 
 interface AboutViewProps {
   onTabChange: (tab: NavigationTab) => void;
@@ -78,6 +79,11 @@ export function AboutView({ onTabChange, onOpen360Tour }: AboutViewProps) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 2.1 CORTE CONSTRUCTIVO INTERACTIVO (WALL SECTION 1:10) */}
+        <div className="border-t border-white/10 pt-16">
+          <WallSectionInteractive />
         </div>
 
         {/* 3. LOS PILARES FUNDAMENTALES DE MHC */}

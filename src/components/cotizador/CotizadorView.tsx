@@ -24,8 +24,13 @@ import {
   Share2,
   FileSpreadsheet,
   Download,
-  Send
+  Send,
+  TrendingUp,
+  FileText,
+  Printer
 } from 'lucide-react';
+import { TourismRoiCalculator } from './TourismRoiCalculator';
+import { DossierModal } from '../dossier/DossierModal';
 
 interface CotizadorViewProps {
   initialModelId?: string;
@@ -54,6 +59,8 @@ export function CotizadorView({
   });
   const [selectedOptionals, setSelectedOptionals] = useState<string[]>([]);
   const [showSummaryModal, setShowSummaryModal] = useState<boolean>(false);
+  const [showDossierModal, setShowDossierModal] = useState<boolean>(false);
+  const [cotizadorTab, setCotizadorTab] = useState<'configurador' | 'rentabilidad'>('configurador');
   const [userName, setUserName] = useState<string>('');
 
   // Paso activo en la interfaz
@@ -114,35 +121,82 @@ export function CotizadorView({
             Elegí el modelo, definí el nivel de terminación y seleccioná materiales y opcionales. El presupuesto se actualiza en tiempo real con transparencia total.
           </p>
 
-          {/* INDICADOR DE PASOS */}
-          <div className="pt-4 flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar text-xs font-mono">
-            {[
-              { num: 1, label: '1. Modelo' },
-              { num: 2, label: '2. Nivel de Terminación' },
-              { num: 3, label: '3. Materiales' },
-              { num: 4, label: '4. Opcionales' }
-            ].map((step) => (
+          {/* SELECTOR ENTRE CONFIGURADOR Y SIMULADOR DE RENTA TURÍSTICA */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+            <div className="flex items-center gap-1.5 bg-neutral-900 p-1 border border-white/10">
               <button
-                key={step.num}
-                onClick={() => setActiveStep(step.num)}
-                className={`px-3.5 py-2 border transition-all ${
-                  activeStep === step.num
-                    ? 'border-[#E7E1D8] text-[#E7E1D8] bg-white/5 font-semibold'
-                    : 'border-white/10 text-neutral-400 hover:text-white'
+                onClick={() => setCotizadorTab('configurador')}
+                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  cotizadorTab === 'configurador'
+                    ? 'bg-[#E7E1D8] text-black shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                {step.label}
+                1. Configurador de Vivienda
               </button>
-            ))}
+              <button
+                onClick={() => setCotizadorTab('rentabilidad')}
+                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 ${
+                  cotizadorTab === 'rentabilidad'
+                    ? 'bg-[#2E3B33] text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-[#E7E1D8]" />
+                <span>2. Simulador Renta Turística (ROI)</span>
+              </button>
+            </div>
+
+            {/* BOTÓN DOSSIER PDF */}
+            <button
+              onClick={() => setShowDossierModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-mono uppercase tracking-wider border border-white/15 transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5 text-[#E7E1D8]" />
+              <span>Dossier Ejecutivo PDF</span>
+            </button>
           </div>
+
+          {/* INDICADOR DE PASOS SI ESTÁ EN MODO CONFIGURADOR */}
+          {cotizadorTab === 'configurador' && (
+            <div className="pt-2 flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar text-xs font-mono">
+              {[
+                { num: 1, label: '1. Modelo' },
+                { num: 2, label: '2. Nivel de Terminación' },
+                { num: 3, label: '3. Materiales' },
+                { num: 4, label: '4. Opcionales' }
+              ].map((step) => (
+                <button
+                  key={step.num}
+                  onClick={() => setActiveStep(step.num)}
+                  className={`px-3.5 py-2 border transition-all ${
+                    activeStep === step.num
+                      ? 'border-[#E7E1D8] text-[#E7E1D8] bg-white/5 font-semibold'
+                      : 'border-white/10 text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {step.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* 2. ÁREA DE CONFIGURACIÓN Y PANEL LATERAL EN TIEMPO REAL */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* COLUMNA IZQUIERDA: PASOS DE SELECCIÓN */}
+          {/* COLUMNA IZQUIERDA: PASOS DE SELECCIÓN O SIMULADOR ROI */}
           <div className="lg:col-span-7 space-y-12">
+            {cotizadorTab === 'rentabilidad' ? (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <TourismRoiCalculator
+                  model={quotationResult.model}
+                  totalEstimatedInvestmentUSD={quotationResult.totalEstimatedUSD}
+                />
+              </div>
+            ) : (
+              <>
             {/* PASO 1: SELECCIÓN DE MODELO */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
@@ -296,22 +350,47 @@ export function CotizadorView({
                           <div
                             key={opt.id}
                             onClick={() => handleMaterialSelect(category, opt.id)}
-                            className={`p-3 border text-xs cursor-pointer flex flex-col justify-between transition-all ${
+                            className={`p-3.5 border text-xs cursor-pointer flex flex-col justify-between transition-all ${
                               isSelected
-                                ? 'border-[#E7E1D8] bg-white/10 text-white font-medium shadow-sm'
+                                ? 'border-[#E7E1D8] bg-white/10 text-white font-medium shadow-sm ring-1 ring-[#E7E1D8]'
                                 : 'border-white/10 bg-neutral-950/60 text-neutral-400 hover:text-white hover:border-white/20'
                             }`}
                           >
-                            <div className="space-y-1">
-                              <div className="font-semibold text-white">{opt.name}</div>
+                            <div className="space-y-2">
+                              {/* SWATCH TÁCTIL Y HINT ARQUITECTÓNICO */}
+                              <div className="flex items-center gap-2">
+                                {opt.swatchColor && (
+                                  <div
+                                    className="w-4 h-4 rounded-xs shrink-0 border border-white/20 shadow-xs"
+                                    style={{ backgroundColor: opt.swatchColor }}
+                                    title={opt.textureHint || opt.name}
+                                  />
+                                )}
+                                <span className="text-[10px] font-mono text-[#8A8D8F] uppercase tracking-wider line-clamp-1">
+                                  {opt.textureHint || opt.category}
+                                </span>
+                              </div>
+
+                              <div className="font-semibold text-white leading-snug">{opt.name}</div>
+
+                              {opt.technicalBadge && (
+                                <div className="inline-block text-[10px] font-mono text-[#E7E1D8] bg-white/5 px-2 py-0.5 border border-white/10">
+                                  {opt.technicalBadge}
+                                </div>
+                              )}
+
                               <p className="text-[11px] text-neutral-400 leading-snug">
                                 {opt.description}
                               </p>
                             </div>
-                            <div className="pt-2 text-[11px] font-mono text-[#E7E1D8]">
-                              {opt.priceDeltaUSD === 0
-                                ? 'Incluido base'
-                                : `+ U$S ${opt.priceDeltaUSD.toLocaleString('es-AR')}`}
+
+                            <div className="pt-3 border-t border-white/5 mt-2 flex items-center justify-between text-[11px] font-mono">
+                              <span className="text-neutral-500">Ajuste:</span>
+                              <span className="text-[#E7E1D8] font-semibold">
+                                {opt.priceDeltaUSD === 0
+                                  ? 'Incluido base'
+                                  : `+ U$S ${opt.priceDeltaUSD.toLocaleString('es-AR')}`}
+                              </span>
                             </div>
                           </div>
                         );
@@ -371,6 +450,8 @@ export function CotizadorView({
                 })}
               </div>
             </section>
+            </>
+            )}
           </div>
 
           {/* COLUMNA DERECHA: PANEL FLOTANTE DE RESUMEN EN TIEMPO REAL */}
@@ -472,6 +553,14 @@ export function CotizadorView({
                 >
                   Ver Ficha de Desglose Completa
                 </button>
+
+                <button
+                  onClick={() => setShowDossierModal(true)}
+                  className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-[#E7E1D8] text-xs font-semibold uppercase tracking-wider text-center border border-white/15 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#E7E1D8]" />
+                  <span>Dossier Técnico en PDF / Imprimir</span>
+                </button>
               </div>
 
               {/* AVISO DE GOOGLE SHEETS / DRIVE DESACOPLADO */}
@@ -567,6 +656,14 @@ export function CotizadorView({
             </div>
           </div>
         </div>
+      )}
+      {/* 4. MODAL DE DOSSIER EDITORIAL IMPRIMIBLE */}
+      {showDossierModal && (
+        <DossierModal
+          model={quotationResult.model}
+          quotation={quotationResult}
+          onClose={() => setShowDossierModal(false)}
+        />
       )}
     </div>
   );

@@ -88,7 +88,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     name: 'Aluminio Aluar Módena DVH (Negro / Anodizado)',
     description: 'Doble vidriado hermético 4/9/4 mm con cierre hermético y felpas perimetrales.',
     priceDeltaUSD: 0,
-    isDefault: true
+    isDefault: true,
+    swatchColor: '#262626',
+    textureHint: 'Aluminio Microtexturado Negro',
+    technicalBadge: 'DVH 4/9/4 mm'
   },
   {
     id: 'ab-a30',
@@ -96,7 +99,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Aberturas & Carpinterías',
     name: 'Aluar A30 New DVH de Alta Prestación',
     description: 'Perfiles reforzados para grandes paños de vidrio expuestos al viento costero, vidrios laminados de seguridad.',
-    priceDeltaUSD: 2400
+    priceDeltaUSD: 2400,
+    swatchColor: '#171717',
+    textureHint: 'Aluminio Pesado Anodizado Mate',
+    technicalBadge: 'Reforzado Viento Costero'
   },
   {
     id: 'ab-pvc',
@@ -104,7 +110,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Aberturas & Carpinterías',
     name: 'PVC Alemán con Ruptura de Puente Térmico (Simil Madera / Grafito)',
     description: 'Máximo coeficiente de aislación térmica y acústica para la costa atlántica, nula corrosión salina.',
-    priceDeltaUSD: 4200
+    priceDeltaUSD: 4200,
+    swatchColor: '#5c4033',
+    textureHint: 'PVC Alemán RPT Símil Madera',
+    technicalBadge: 'Máxima Estanqueidad Acústica'
   },
 
   // Pisos
@@ -115,7 +124,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     name: 'Porcelanato Satinado 60×60 cm Neutro',
     description: 'Resistente a la arena, fácil limpieza, acabado mate en tonos cemento o arena cálido.',
     priceDeltaUSD: 0,
-    isDefault: true
+    isDefault: true,
+    swatchColor: '#a8a29e',
+    textureHint: 'Porcelanato Satinado Cemento',
+    technicalBadge: 'Apto Arena & Tránsito Playa'
   },
   {
     id: 'pi-porcelanato-gran-formato',
@@ -123,7 +135,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Pisos & Revestimientos',
     name: 'Porcelanato Rectificado 60×120 cm Primera Selección',
     description: 'Juntas mínimas casi imperceptibles, estética contemporánea y continua.',
-    priceDeltaUSD: 1800
+    priceDeltaUSD: 1800,
+    swatchColor: '#d6d3d1',
+    textureHint: 'Porcelanato Rectificado XL',
+    technicalBadge: 'Junta Mínima 1.5mm'
   },
   {
     id: 'pi-spc',
@@ -131,7 +146,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Pisos & Revestimientos',
     name: 'Piso Vinílico SPC Rígido Click Símil Madera Natural',
     description: '100% resistente al agua y humedad, pisada cálida descalzo, ideal para casas de playa.',
-    priceDeltaUSD: 2100
+    priceDeltaUSD: 2100,
+    swatchColor: '#b48a60',
+    textureHint: 'Vinílico SPC Veta Roble Natural',
+    technicalBadge: '100% Resistente Agua / Hidrófugo'
   },
 
   // Exterior
@@ -142,7 +160,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     name: 'Sistema EIFS con Revoque Acrílico Texturado Elastomérico',
     description: 'Aislación exterior continua que elimina puentes térmicos. Color y textura a elección.',
     priceDeltaUSD: 0,
-    isDefault: true
+    isDefault: true,
+    swatchColor: '#d8cebe',
+    textureHint: 'EIFS Texturado Arena / Cemento',
+    technicalBadge: 'Aislación Continua Sin Puentes'
   },
   {
     id: 'ext-chapa-negra',
@@ -150,7 +171,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Terminación de Fachada Exterior',
     name: 'Combinación EIFS + Chapa Sinusoidal Prepintada Negra Mate',
     description: 'Diseño nórdico industrial contemporáneo de gran durabilidad y nulo mantenimiento.',
-    priceDeltaUSD: 1900
+    priceDeltaUSD: 1900,
+    swatchColor: '#1f2421',
+    textureHint: 'Chapa Acanalada Negra Mate',
+    technicalBadge: 'Cero Mantenimiento Costero'
   },
   {
     id: 'ext-siding-madera',
@@ -158,7 +182,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Terminación de Fachada Exterior',
     name: 'Combinación EIFS + Siding de Fibrocemento Texturado Símil Madera',
     description: 'Calidez estética de la madera con la resistencia indestructible del fibrocemento.',
-    priceDeltaUSD: 2500
+    priceDeltaUSD: 2500,
+    swatchColor: '#8a5a36',
+    textureHint: 'Siding Fibrocemento Madera',
+    technicalBadge: 'Incombustible & Anticorrosivo'
   },
 
   // Climatización
@@ -169,7 +196,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     name: 'Preinstalación Completa de Cañerías para Aire Split',
     description: 'Cañerías de cobre aisladas, desagües embutidos y tomas eléctricas en dormitorios y estar.',
     priceDeltaUSD: 0,
-    isDefault: true
+    isDefault: true,
+    swatchColor: '#64748b',
+    textureHint: 'Cañerías Cobre Embutidas',
+    technicalBadge: 'Listo para Conectar Split'
   },
   {
     id: 'clim-split-inverter',
@@ -177,7 +207,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Climatización & Confort',
     name: 'Equipos Split Inverter Frío/Calor Instalados en Todos los Ambientes',
     description: 'Equipos silenciosos de bajo consumo energético Clase A++ para confort todo el año.',
-    priceDeltaUSD: 3600
+    priceDeltaUSD: 3600,
+    swatchColor: '#0284c7',
+    textureHint: 'Aires Split Inverter A++',
+    technicalBadge: 'Consumo Ultra Bajo A++'
   },
   {
     id: 'clim-losa-radiante',
@@ -185,7 +218,10 @@ export const MATERIAL_OPTIONS: MaterialOption[] = [
     categoryLabel: 'Climatización & Confort',
     name: 'Losa Radiante Eléctrica Sectorizada con Termostatos Wi-Fi',
     description: 'Calefacción invisible y confortable desde el piso, controlable a distancia desde el celular.',
-    priceDeltaUSD: 4900
+    priceDeltaUSD: 4900,
+    swatchColor: '#ea580c',
+    textureHint: 'Mallas Radiantes Bajo Piso',
+    technicalBadge: 'Control Wi-Fi Remoto'
   }
 ];
 

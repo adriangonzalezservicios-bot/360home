@@ -56,6 +56,9 @@ export interface MaterialOption {
   description: string;
   priceDeltaUSD: number;
   isDefault?: boolean;
+  swatchColor?: string;
+  textureHint?: string;
+  technicalBadge?: string;
 }
 
 export interface OptionalItem {
